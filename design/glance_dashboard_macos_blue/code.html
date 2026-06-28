@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Glance | Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+    /* SF Pro Display simulation using Inter as a fallback for web */
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    
+    /* Custom Scrollbar for the console effect */
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 2px;
+    }
+    
+    /* Subtle glass effect for overlays */
+    .glass-panel {
+      background: rgba(30, 30, 30, 0.8);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+
+    /* Pulsing animation for the status indicator */
+    @keyframes pulse-blue {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.2); }
+    }
+    .animate-status-pulse {
+      animation: pulse-blue 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+    }
+
+    /* Command Palette Cursor Blink */
+    @keyframes blink {
+      50% { opacity: 0; }
+    }
+    .cursor-blink {
+      animation: blink 1s step-end infinite;
+    }
+
+    /* Apple Sidebar Style */
+    .apple-sidebar {
+      background: rgba(30, 30, 30, 0.75);
+      backdrop-filter: blur(30px);
+      -webkit-backdrop-filter: blur(30px);
+    }
+  </style>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "background": "#121212",
+            "surface": "#121212",
+            "surface-container": "#2C2C2E",
+            "surface-container-low": "#1E1E1E",
+            "surface-container-high": "#3A3A3C",
+            "surface-container-highest": "#48484A",
+            "primary": "#0A84FF",
+            "on-primary": "#FFFFFF",
+            "primary-container": "#0A84FF",
+            "on-primary-container": "#FFFFFF",
+            "secondary": "#8E8E93",
+            "outline": "#3A3A3C",
+            "outline-variant": "#48484A",
+            "on-surface": "#FFFFFF",
+            "on-surface-variant": "#AEAEB2",
+            "error": "#FF453A",
+            "warning": "#FF9500",
+            "tertiary": "#FF9500"
+          },
+          "borderRadius": {
+            "DEFAULT": "6px",
+            "lg": "10px",
+            "xl": "12px",
+            "full": "9999px"
+          },
+          "spacing": {
+            "md": "16px",
+            "xl": "32px",
+            "margin-desktop": "40px",
+            "margin-mobile": "16px",
+            "sm": "8px",
+            "xs": "4px",
+            "unit": "4px",
+            "lg": "24px",
+            "gutter": "16px"
+          },
+          "fontFamily": {
+            "body-md": ["Inter", "sans-serif"],
+            "body-sm": ["Inter", "sans-serif"],
+            "headline-lg": ["Inter", "sans-serif"],
+            "headline-md": ["Inter", "sans-serif"],
+            "code-sm": ["JetBrains Mono", "monospace"],
+            "label-caps": ["Inter", "sans-serif"],
+            "headline-sm": ["Inter", "sans-serif"]
+          },
+          "fontSize": {
+            "body-md": ["14px", {"lineHeight": "24px", "letterSpacing": "0", "fontWeight": "400"}],
+            "body-sm": ["13px", {"lineHeight": "20px", "letterSpacing": "0", "fontWeight": "400"}],
+            "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+            "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+            "code-sm": ["13px", {"lineHeight": "20px", "letterSpacing": "0", "fontWeight": "450"}],
+            "label-caps": ["11px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+            "headline-sm": ["18px", {"lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "500"}]
+          }
+        },
+      },
+    }
+  </script>
+</head>
+<body class="bg-background text-on-surface font-body-md selection:bg-primary/30">
+<div class="flex h-screen overflow-hidden">
+<!-- SideNavBar (Apple Space Gray Semi-transparent) -->
+<aside class="fixed left-0 top-0 h-full w-[240px] apple-sidebar border-r border-outline flex flex-col py-md px-sm z-50">
+<!-- Header -->
+<div class="mb-xl px-sm">
+<div class="flex items-center gap-sm mb-xs">
+<div class="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-on-primary shadow-lg shadow-primary/20">
+<span class="material-symbols-outlined font-bold" style="font-variation-settings: 'FILL' 1;">sensors</span>
+</div>
+<h1 class="font-headline-sm text-headline-sm font-semibold text-on-surface">Glance</h1>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant">v1.0.4 - Agent Running</p>
+</div>
+<!-- Navigation tabs -->
+<nav class="flex-1 space-y-xs overflow-y-auto custom-scrollbar">
+<!-- Overview (Active) -->
+<a class="flex items-center gap-sm px-sm py-sm text-on-primary bg-primary rounded-lg transition-all duration-150 ease-in-out font-body-sm text-body-sm" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span>Overview</span>
+</a>
+<!-- GitHub Settings -->
+<a class="flex items-center gap-sm px-sm py-sm text-on-surface-variant hover:text-on-surface hover:bg-white/5 transition-all duration-150 ease-in-out font-body-sm text-body-sm" href="#">
+<span class="material-symbols-outlined">settings_ethernet</span>
+<span>GitHub Settings</span>
+</a>
+<!-- Docker Daemon -->
+<a class="flex items-center gap-sm px-sm py-sm text-on-surface-variant hover:text-on-surface hover:bg-white/5 transition-all duration-150 ease-in-out font-body-sm text-body-sm" href="#">
+<span class="material-symbols-outlined">terminal</span>
+<span>Docker Daemon</span>
+</a>
+<!-- Servers/VPS -->
+<a class="flex items-center gap-sm px-sm py-sm text-on-surface-variant hover:text-on-surface hover:bg-white/5 transition-all duration-150 ease-in-out font-body-sm text-body-sm" href="#">
+<span class="material-symbols-outlined">dns</span>
+<span>Servers/VPS</span>
+</a>
+<!-- Logs -->
+<a class="flex items-center gap-sm px-sm py-sm text-on-surface-variant hover:text-on-surface hover:bg-white/5 transition-all duration-150 ease-in-out font-body-sm text-body-sm" href="#">
+<span class="material-symbols-outlined">receipt_long</span>
+<span>Logs</span>
+</a>
+</nav>
+<!-- Footer -->
+<div class="mt-auto pt-md border-t border-outline space-y-xs">
+<a class="flex items-center gap-sm px-sm py-sm text-on-surface-variant hover:text-on-surface hover:bg-white/5 transition-all duration-150 ease-in-out font-body-sm text-body-sm" href="#">
+<span class="material-symbols-outlined">description</span>
+<span>Docs</span>
+</a>
+<a class="flex items-center gap-sm px-sm py-sm text-on-surface-variant hover:text-on-surface hover:bg-white/5 transition-all duration-150 ease-in-out font-body-sm text-body-sm" href="#">
+<span class="material-symbols-outlined">logout</span>
+<span>Logout</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Canvas -->
+<main class="ml-[240px] flex-1 flex flex-col h-screen overflow-hidden relative bg-background">
+<!-- Top Bar -->
+<header class="h-16 flex justify-between items-center w-full px-md py-sm bg-background border-b border-outline z-40">
+<div class="flex items-center gap-md">
+<h2 class="font-headline-md text-headline-md font-bold text-on-surface tracking-tight">System Console</h2>
+<div class="h-4 w-px bg-outline"></div>
+<div class="flex items-center gap-xs px-sm py-xs bg-surface-container rounded border border-outline">
+<span class="material-symbols-outlined text-[14px] text-primary">terminal</span>
+<span class="font-code-sm text-code-sm text-primary">usr/bin/glance-agent --active</span>
+</div>
+</div>
+<div class="flex items-center gap-sm">
+<button class="flex items-center gap-xs px-sm py-xs text-on-surface-variant hover:text-on-surface transition-colors rounded">
+<span class="material-symbols-outlined">sensors</span>
+</button>
+<button class="bg-primary text-on-primary px-md py-1.5 rounded-lg font-body-sm text-body-sm font-semibold hover:brightness-110 active:scale-95 duration-100 transition-all shadow-lg shadow-primary/20">
+            Sign in with GitHub
+          </button>
+</div>
+</header>
+<!-- Dashboard Grid -->
+<section class="flex-1 overflow-y-auto p-xl custom-scrollbar space-y-xl">
+<!-- Welcome Header -->
+<div class="mb-md">
+<h3 class="font-headline-lg text-headline-lg text-on-surface mb-xs">Management Overview</h3>
+<p class="text-on-surface-variant font-body-md">Configure your local environments and remote infrastructure connections.</p>
+</div>
+<!-- Bento Grid Configuration Cards -->
+<div class="grid grid-cols-12 gap-gutter">
+<!-- GitHub Settings Card -->
+<div class="col-span-12 lg:col-span-8 bg-surface-container border border-outline rounded-xl p-md flex flex-col group hover:border-primary transition-colors">
+<div class="flex justify-between items-start mb-md">
+<div>
+<div class="flex items-center gap-xs text-primary mb-1">
+<span class="material-symbols-outlined text-sm">settings_ethernet</span>
+<span class="font-label-caps text-label-caps uppercase">Integrations</span>
+</div>
+<h4 class="font-headline-sm text-headline-sm text-on-surface">GitHub Settings</h4>
+</div>
+<span class="material-symbols-outlined text-on-surface-variant opacity-30 group-hover:opacity-100 transition-opacity">open_in_new</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-md flex-1">
+<div class="space-y-sm">
+<label class="block font-label-caps text-label-caps text-on-surface-variant">Personal Access Token</label>
+<div class="relative group/input">
+<input class="w-full bg-background border border-outline rounded px-sm py-2 font-code-sm text-code-sm text-on-surface focus:border-primary focus:ring-0 focus:outline-none transition-all" type="password" value="ghp_************************"/>
+<button class="absolute right-2 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary transition-colors">
+<span class="material-symbols-outlined text-sm">visibility</span>
+</button>
+</div>
+<p class="text-[11px] text-on-surface-variant/60 font-body-sm">Required for repo discovery and CI/CD triggers.</p>
+</div>
+<div class="space-y-sm">
+<label class="block font-label-caps text-label-caps text-on-surface-variant">Tracked Repositories</label>
+<div class="space-y-xs">
+<div class="flex items-center justify-between p-2 bg-background border border-outline rounded text-body-sm">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-sm text-primary">folder</span>
+<span class="font-code-sm">org/glance-core</span>
+</div>
+<span class="text-[10px] px-1.5 py-0.5 bg-primary/10 text-primary rounded">main</span>
+</div>
+<div class="flex items-center justify-between p-2 bg-background border border-outline rounded text-body-sm">
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-sm text-on-surface-variant">folder</span>
+<span class="font-code-sm">org/glance-ui</span>
+</div>
+<span class="text-[10px] px-1.5 py-0.5 bg-white/5 text-on-surface-variant rounded">v2-beta</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Docker Daemon Card -->
+<div class="col-span-12 lg:col-span-4 bg-surface-container border border-outline rounded-xl p-md flex flex-col group hover:border-primary transition-colors">
+<div class="flex items-center gap-xs text-primary mb-1">
+<span class="material-symbols-outlined text-sm">terminal</span>
+<span class="font-label-caps text-label-caps uppercase">Runtime</span>
+</div>
+<h4 class="font-headline-sm text-headline-sm text-on-surface mb-md">Docker Daemon</h4>
+<div class="space-y-md">
+<div class="space-y-sm">
+<label class="block font-label-caps text-label-caps text-on-surface-variant">Unix Socket Path</label>
+<input class="w-full bg-background border border-outline rounded px-sm py-2 font-code-sm text-code-sm text-on-surface focus:border-primary focus:ring-0 focus:outline-none transition-all" type="text" value="/var/run/docker.sock"/>
+</div>
+<div class="flex items-center justify-between text-body-sm pt-2">
+<span class="text-on-surface-variant">Status</span>
+<span class="flex items-center gap-1.5 text-primary">
+<span class="w-2 h-2 rounded-full bg-primary animate-status-pulse"></span>
+                  Active
+                </span>
+</div>
+<div class="flex items-center justify-between text-body-sm">
+<span class="text-on-surface-variant">Version</span>
+<span class="text-on-surface font-code-sm">24.0.7-ce</span>
+</div>
+</div>
+</div>
+<!-- Remote Servers Card -->
+<div class="col-span-12 bg-surface-container border border-outline rounded-xl p-md flex flex-col group hover:border-primary transition-colors">
+<div class="flex justify-between items-center mb-md">
+<div>
+<div class="flex items-center gap-xs text-primary mb-1">
+<span class="material-symbols-outlined text-sm">dns</span>
+<span class="font-label-caps text-label-caps uppercase">Infrastructure</span>
+</div>
+<h4 class="font-headline-sm text-headline-sm text-on-surface">Remote Servers</h4>
+</div>
+<button class="flex items-center gap-xs bg-background border border-outline px-md py-1.5 rounded font-body-sm text-body-sm hover:bg-white/5 transition-colors">
+<span class="material-symbols-outlined text-[16px]">add</span>
+                Add Node
+              </button>
+</div>
+<div class="overflow-hidden">
+<table class="w-full text-left font-body-sm border-collapse">
+<thead class="text-on-surface-variant font-label-caps text-[11px] border-b border-outline">
+<tr>
+<th class="pb-2 font-semibold uppercase tracking-wider">Hostname</th>
+<th class="pb-2 font-semibold uppercase tracking-wider">IP Address</th>
+<th class="pb-2 font-semibold uppercase tracking-wider">SSH Config</th>
+<th class="pb-2 font-semibold uppercase tracking-wider">Last Sync</th>
+<th class="pb-2 text-right">Actions</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline/30">
+<tr class="hover:bg-white/5 transition-colors group/row">
+<td class="py-md font-medium text-on-surface">vps-prod-01</td>
+<td class="py-md font-code-sm text-on-surface-variant">192.168.1.42</td>
+<td class="py-md font-code-sm text-on-surface-variant">id_rsa_glance</td>
+<td class="py-md text-on-surface-variant italic">2m ago</td>
+<td class="py-md text-right">
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary transition-colors">settings</span>
+</td>
+</tr>
+<tr class="hover:bg-white/5 transition-colors group/row">
+<td class="py-md font-medium text-on-surface">staging-cluster-node</td>
+<td class="py-md font-code-sm text-on-surface-variant">10.0.8.21</td>
+<td class="py-md font-code-sm text-on-surface-variant">staging_pem</td>
+<td class="py-md text-on-surface-variant italic">Just now</td>
+<td class="py-md text-right">
+<span class="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary transition-colors">settings</span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</section>
+<!-- Status/Logs Floating Console (Bottom Right - macOS Style) -->
+<div class="absolute bottom-md right-md w-80 z-50">
+<div class="glass-panel border border-outline rounded-xl shadow-2xl overflow-hidden flex flex-col max-h-64">
+<div class="bg-surface-container-high px-md py-sm flex items-center justify-between border-b border-outline">
+<div class="flex items-center gap-sm">
+<div class="w-2 h-2 rounded-full bg-primary animate-status-pulse"></div>
+<span class="font-label-caps text-label-caps text-primary uppercase">Status: Agent Running</span>
+</div>
+<button class="text-on-surface-variant hover:text-white transition-colors" onclick="this.closest('.glass-panel').classList.toggle('opacity-50')">
+<span class="material-symbols-outlined text-[16px]">expand_more</span>
+</button>
+</div>
+<div class="p-md font-code-sm text-code-sm text-on-surface-variant custom-scrollbar overflow-y-auto space-y-1 bg-black/40">
+<div class="flex gap-2">
+<span class="text-white/20 select-none">12:04:11</span>
+<span class="text-primary/70">[SYS]</span>
+<span class="text-on-surface">Agent actively running</span>
+</div>
+<div class="flex gap-2">
+<span class="text-white/20 select-none">12:04:12</span>
+<span class="text-primary/70">[NET]</span>
+<span class="text-on-surface-variant">Listening on port 8080...</span>
+</div>
+<div class="flex gap-2">
+<span class="text-white/20 select-none">12:04:15</span>
+<span class="text-warning/70">[DOCK]</span>
+<span class="text-on-surface-variant">Syncing container stats</span>
+</div>
+<div class="flex gap-2">
+<span class="text-white/20 select-none">12:04:18</span>
+<span class="text-primary/70">[GIT]</span>
+<span class="text-on-surface-variant">Webhook listener active</span>
+</div>
+<div class="flex gap-2 items-center">
+<span class="text-white/20 select-none">12:04:22</span>
+<span class="text-primary/70">[LOG]</span>
+<span class="text-on-surface w-2 h-4 bg-primary/40 cursor-blink ml-1"></span>
+</div>
+</div>
+</div>
+</div>
+</main>
+</div>
+<!-- Micro-interactions Script -->
+<script>
+    // Simple log pusher simulation
+    const logContainer = document.querySelector('.p-md.font-code-sm');
+    const logs = [
+      { tag: 'SYS', msg: 'Heartbeat signal sent to master', color: 'text-primary/70' },
+      { tag: 'DOCK', msg: 'Pulling image node:18-alpine', color: 'text-warning/70' },
+      { tag: 'NET', msg: 'Incoming connection from 127.0.0.1', color: 'text-primary/70' },
+      { tag: 'GIT', msg: 'Syncing glance-core repository', color: 'text-primary/70' }
+    ];
+
+    function addLog() {
+      if (!logContainer) return;
+      const log = logs[Math.floor(Math.random() * logs.length)];
+      const time = new Date().toLocaleTimeString('en-GB', { hour12: false });
+      
+      const logEntry = document.createElement('div');
+      logEntry.className = 'flex gap-2 opacity-0 transition-opacity duration-500';
+      logEntry.innerHTML = `
+        <span class="text-white/20 select-none">${time}</span>
+        <span class="${log.color}">[${log.tag}]</span>
+        <span class="text-on-surface-variant">${log.msg}</span>
+      `;
+      
+      // Insert before the cursor blink element
+      const blinkLine = logContainer.lastElementChild;
+      logContainer.insertBefore(logEntry, blinkLine);
+      
+      setTimeout(() => logEntry.classList.remove('opacity-0'), 10);
+      
+      // Maintain scroll
+      logContainer.scrollTop = logContainer.scrollHeight;
+      
+      // Limit logs
+      if (logContainer.children.length > 20) {
+        logContainer.removeChild(logContainer.firstElementChild);
+      }
+    }
+
+    setInterval(addLog, 4000);
+  </script>
+</body></html>

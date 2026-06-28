@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Glance Widget Concept</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&amp;family=JetBrains+Mono:wght@450&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "mac-blue": "#0A84FF",
+                        "inverse-surface": "#e3e1ec",
+                        "surface-container": "#1E1E1E",
+                        "on-tertiary": "#303033",
+                        "tertiary-fixed-dim": "#c8c5ca",
+                        "surface-tint": "#0A84FF",
+                        "primary": "#0A84FF",
+                        "on-surface-variant": "#A1A1A1",
+                        "surface-dim": "#12131a",
+                        "on-primary-fixed-variant": "#005236",
+                        "on-error-container": "#ffdad6",
+                        "secondary-fixed": "#e2e2e2",
+                        "on-primary": "#FFFFFF",
+                        "outline": "#86948a",
+                        "surface-bright": "#383941",
+                        "primary-container": "#0A84FF",
+                        "on-background": "#FFFFFF",
+                        "on-surface": "#FFFFFF",
+                        "on-tertiary-fixed-variant": "#47464a",
+                        "tertiary-container": "#a4a2a6",
+                        "on-tertiary-container": "#39393c",
+                        "secondary": "#c6c6c7",
+                        "tertiary-fixed": "#e4e1e6",
+                        "inverse-on-surface": "#2f3038",
+                        "surface-container-high": "#292931",
+                        "on-secondary-fixed-variant": "#454747",
+                        "secondary-container": "#454747",
+                        "on-secondary": "#2f3131",
+                        "on-secondary-container": "#b4b5b5",
+                        "error-container": "#93000a",
+                        "tertiary": "#c8c5ca",
+                        "secondary-fixed-dim": "#c6c6c7",
+                        "outline-variant": "#3c4a42",
+                        "surface-container-lowest": "#0d0e15",
+                        "error": "#ffb4ab",
+                        "background": "#1E1E1E",
+                        "on-error": "#690005",
+                        "primary-fixed-dim": "#0A84FF",
+                        "surface-variant": "#33343c",
+                        "inverse-primary": "#006c49",
+                        "on-tertiary-fixed": "#1b1b1e",
+                        "surface-container-highest": "#33343c",
+                        "on-secondary-fixed": "#1a1c1c",
+                        "surface": "#1E1E1E",
+                        "on-primary-fixed": "#002113",
+                        "on-primary-container": "#FFFFFF",
+                        "primary-fixed": "#6ffbbe",
+                        "surface-container-low": "#1a1b22"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "md": "16px",
+                        "xl": "32px",
+                        "margin-desktop": "40px",
+                        "margin-mobile": "16px",
+                        "sm": "8px",
+                        "xs": "4px",
+                        "unit": "4px",
+                        "lg": "24px",
+                        "gutter": "16px"
+                    },
+                    "fontFamily": {
+                        "body-md": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "headline-lg": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "code-sm": ["JetBrains Mono"],
+                        "label-caps": ["Inter"],
+                        "headline-sm": ["Inter"]
+                    },
+                    "fontSize": {
+                        "body-md": ["14px", {"lineHeight": "24px", "letterSpacing": "0", "fontWeight": "400"}],
+                        "body-sm": ["13px", {"lineHeight": "20px", "letterSpacing": "0", "fontWeight": "400"}],
+                        "headline-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                        "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                        "code-sm": ["13px", {"lineHeight": "20px", "letterSpacing": "0", "fontWeight": "450"}],
+                        "label-caps": ["11px", {"lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600"}],
+                        "headline-sm": ["18px", {"lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "500"}]
+                    }
+                },
+            },
+        }
+    </script>
+<style>
+        body {
+            background-color: #09090b;
+            color: #FFFFFF;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        .widget-canvas {
+            width: 158px;
+            height: 158px;
+        }
+        .contribution-cell {
+            width: 8px;
+            height: 8px;
+            border-radius: 2px;
+        }
+        .glass-panel {
+            background: #1E1E1E;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+        }
+        @keyframes subtle-pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .animate-status {
+            animation: subtle-pulse 2s ease-in-out infinite;
+        }
+    </style>
+<style>
+        body {
+            min-height: max(884px, 100dvh);
+        }
+    </style>
+</head>
+<body class="flex items-center justify-center min-h-screen p-md">
+<!-- Main Widget Container -->
+<div class="relative z-10">
+<!-- macOS Widget (Small Size: 158x158pt) -->
+<div class="widget-canvas glass-panel rounded-[24px] p-[14px] flex flex-col justify-between shadow-2xl relative overflow-hidden group hover:scale-[1.02] transition-transform duration-300">
+<!-- Header Section -->
+<div class="flex justify-between items-start">
+<div class="flex flex-col">
+<span class="font-label-caps text-label-caps text-on-surface-variant tracking-wider uppercase">Contributions</span>
+<div class="flex items-baseline gap-xs mt-xs">
+<span class="font-headline-md text-headline-md text-on-surface font-extrabold leading-none">12</span>
+<span class="font-body-sm text-body-sm text-mac-blue font-medium">Today</span>
+</div>
+</div>
+<div class="flex items-center gap-xs">
+<div class="w-1.5 h-1.5 rounded-full bg-mac-blue animate-status shadow-[0_0_8px_rgba(10,132,255,0.6)]"></div>
+</div>
+</div>
+<!-- Visualization: Mini GitHub Grid -->
+<div class="grid grid-cols-7 gap-[3px] my-sm">
+<!-- Row 1 -->
+<div class="contribution-cell bg-white/5"></div>
+<div class="contribution-cell bg-mac-blue/20"></div>
+<div class="contribution-cell bg-mac-blue/40"></div>
+<div class="contribution-cell bg-white/5"></div>
+<div class="contribution-cell bg-white/60"></div>
+<div class="contribution-cell bg-white/80"></div>
+<div class="contribution-cell bg-white"></div>
+<!-- Row 2 -->
+<div class="contribution-cell bg-mac-blue/40"></div>
+<div class="contribution-cell bg-white/5"></div>
+<div class="contribution-cell bg-mac-blue/20"></div>
+<div class="contribution-cell bg-white/5"></div>
+<div class="contribution-cell bg-mac-blue/20"></div>
+<div class="contribution-cell bg-white/5"></div>
+<div class="contribution-cell bg-white/5"></div>
+<!-- Row 3 -->
+<div class="contribution-cell bg-white/5"></div>
+<div class="contribution-cell bg-white/5"></div>
+<div class="contribution-cell bg-white/60"></div>
+<div class="contribution-cell bg-mac-blue/40"></div>
+<div class="contribution-cell bg-mac-blue/20"></div>
+<div class="contribution-cell bg-white/5"></div>
+<div class="contribution-cell bg-mac-blue"></div>
+</div>
+<!-- Footer: Brand Watermark -->
+<div class="flex justify-between items-center mt-auto border-t border-white/5 pt-sm">
+<div class="flex items-center gap-xs">
+<span class="material-symbols-outlined text-[14px] text-mac-blue">sensors</span>
+<span class="font-code-sm text-code-sm text-on-surface-variant">Glance</span>
+</div>
+<span class="font-code-sm text-code-sm text-on-surface-variant/40">v1.0</span>
+</div>
+<!-- Decorative Glow (Invisible by default, reveals on hover) -->
+<div class="absolute -bottom-4 -right-4 w-16 h-16 bg-mac-blue/10 blur-2xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+</div>
+<!-- Annotation for presentation -->
+<div class="mt-xl text-center">
+<p class="font-body-sm text-body-sm text-on-surface-variant italic">WidgetKit Small • 158 x 158</p>
+</div>
+</div>
+<!-- Background Interaction Script -->
+<script>
+        document.addEventListener('mousemove', (e) => {
+            const widget = document.querySelector('.widget-canvas');
+            if(!widget) return;
+            const rect = widget.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            // Subtle tilt effect
+            const centerX = rect.width / 2;
+            const centerY = rect.height / 2;
+            const rotateX = (y - centerY) / 20;
+            const rotateY = (centerX - x) / 20;
+            
+            widget.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.02)`;
+        });
+
+        document.addEventListener('mouseleave', () => {
+            const widget = document.querySelector('.widget-canvas');
+            if(!widget) return;
+            widget.style.transform = `perspective(1000px) rotateX(0deg) rotateY(0deg) scale(1)`;
+        });
+    </script>
+</body></html>
