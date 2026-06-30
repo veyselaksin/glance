@@ -20,10 +20,35 @@ export namespace main {
 	        this.server_host = source["server_host"];
 	    }
 	}
+	export class ContainerInfo {
+	    id: string;
+	    name: string;
+	    image: string;
+	    state: string;
+	    status: string;
+	    cpu_usage: number;
+	    mem_usage: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new ContainerInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.image = source["image"];
+	        this.state = source["state"];
+	        this.status = source["status"];
+	        this.cpu_usage = source["cpu_usage"];
+	        this.mem_usage = source["mem_usage"];
+	    }
+	}
 	export class DockerStats {
 	    running: number;
 	    stopped: number;
 	    total: number;
+	    version: string;
 	    error?: string;
 	
 	    static createFrom(source: any = {}) {
@@ -35,12 +60,14 @@ export namespace main {
 	        this.running = source["running"];
 	        this.stopped = source["stopped"];
 	        this.total = source["total"];
+	        this.version = source["version"];
 	        this.error = source["error"];
 	    }
 	}
 	export class GitHubStats {
 	    username: string;
 	    contributions: number;
+	    commits: number;
 	    error?: string;
 	
 	    static createFrom(source: any = {}) {
@@ -51,6 +78,7 @@ export namespace main {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.username = source["username"];
 	        this.contributions = source["contributions"];
+	        this.commits = source["commits"];
 	        this.error = source["error"];
 	    }
 	}

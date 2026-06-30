@@ -7,7 +7,7 @@
   "frontend:dev:watcher": "npm run dev",
   "frontend:dev:serverUrl": "auto",
   "postBuildHooks": {
-    "darwin/*": "bash scripts/embed-widget.sh "${bin}""
+    "darwin/*": "bash ../../scripts/embed-widget.sh \"${bin}\""
   },
   "author": {
     "name": "veyselaksin",

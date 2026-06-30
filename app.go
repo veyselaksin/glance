@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto/rand"
 	"encoding/hex"
@@ -21,6 +22,7 @@ import (
 
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/client"
+	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
@@ -39,6 +41,7 @@ type Config struct {
 type GitHubStats struct {
 	Username      string `json:"username"`
 	Contributions int    `json:"contributions"`
+	Commits       int    `json:"commits"`
 	Error         string `json:"error,omitempty"`
 }
 
@@ -47,7 +50,19 @@ type DockerStats struct {
 	Running int    `json:"running"`
 	Stopped int    `json:"stopped"`
 	Total   int    `json:"total"`
+	Version string `json:"version"`
 	Error   string `json:"error,omitempty"`
+}
+
+// ContainerInfo holds per-container metadata and live resource metrics.
+type ContainerInfo struct {
+	ID       string  `json:"id"`
+	Name     string  `json:"name"`
+	Image    string  `json:"image"`
+	State    string  `json:"state"`
+	Status   string  `json:"status"`
+	CPUUsage float64 `json:"cpu_usage"` // percentage
+	MemUsage uint64  `json:"mem_usage"` // bytes
 }
 
 // ServerStatus holds TCP reachability and latency for a remote host.
@@ -117,7 +132,7 @@ func (a *App) refresh() {
 	if gh.Error != "" {
 		runtime.EventsEmit(a.ctx, "agent_log", map[string]string{"tag": "GIT", "msg": "GitHub Error: " + gh.Error})
 	} else {
-		runtime.EventsEmit(a.ctx, "agent_log", map[string]string{"tag": "GIT", "msg": fmt.Sprintf("Synced contributions: %d today", gh.Contributions)})
+		runtime.EventsEmit(a.ctx, "agent_log", map[string]string{"tag": "GIT", "msg": fmt.Sprintf("Synced: %d contributions, %d commits today", gh.Contributions, gh.Commits)})
 	}
 
 	dk := a.GetDockerStats()
@@ -563,7 +578,67 @@ func (a *App) GetGitHubStats(username string) GitHubStats {
 		}
 	}
 
-	return GitHubStats{Username: username, Contributions: contributions}
+	commits := a.getGitHubCommitsToday(username, token)
+
+	return GitHubStats{Username: username, Contributions: contributions, Commits: commits}
+}
+
+// getGitHubCommitsToday counts actual commits pushed today via the REST Events
+// API. It filters PushEvents by today's date (checking created_at) and sums
+// payload.size (the number of commits in each push).
+func (a *App) getGitHubCommitsToday(username, token string) int {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet,
+		fmt.Sprintf("https://api.github.com/users/%s/events/public?per_page=100", username), nil)
+	if err != nil {
+		return 0
+	}
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("User-Agent", "Glance-Widget/1.0")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return 0
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return 0
+	}
+
+	var events []struct {
+		Type      string `json:"type"`
+		CreatedAt string `json:"created_at"`
+		Payload   struct {
+			Size int `json:"size"`
+		} `json:"payload"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&events); err != nil {
+		return 0
+	}
+
+	todayLocal := time.Now().Format("2006-01-02")
+	todayUTC := time.Now().UTC().Format("2006-01-02")
+	commits := 0
+	for _, e := range events {
+		if e.Type != "PushEvent" {
+			continue
+		}
+		// GitHub event timestamps are ISO-8601 UTC (e.g. "2026-07-01T12:34:56Z").
+		// Extract the date portion and compare against both local and UTC today.
+		if len(e.CreatedAt) < 10 {
+			continue
+		}
+		eventDate := e.CreatedAt[:10]
+		if eventDate == todayLocal || eventDate == todayUTC {
+			commits += e.Payload.Size
+		}
+	}
+	return commits
 }
 
 func (a *App) getGitHubStatsScraper(username string) GitHubStats {
@@ -595,20 +670,20 @@ func (a *App) getGitHubStatsScraper(username string) GitHubStats {
 	re1 := regexp.MustCompile(`data-date="` + regexp.QuoteMeta(today) + `"[^>]*data-count="(\d+)"`)
 	if m := re1.FindSubmatch(body); m != nil {
 		count, _ := strconv.Atoi(string(m[1]))
-		return GitHubStats{Username: username, Contributions: count}
+		return GitHubStats{Username: username, Contributions: count, Commits: a.getGitHubCommitsToday(username, "")}
 	}
 	re2 := regexp.MustCompile(`data-count="(\d+)"[^>]*data-date="` + regexp.QuoteMeta(today) + `"`)
 	if m := re2.FindSubmatch(body); m != nil {
 		count, _ := strconv.Atoi(string(m[1]))
-		return GitHubStats{Username: username, Contributions: count}
+		return GitHubStats{Username: username, Contributions: count, Commits: a.getGitHubCommitsToday(username, "")}
 	}
 	todayFormatted := time.Now().UTC().Format("January 2, 2006")
 	re3 := regexp.MustCompile(`aria-label="(\d+) contributions? on ` + regexp.QuoteMeta(todayFormatted) + `"`)
 	if m := re3.FindSubmatch(body); m != nil {
 		count, _ := strconv.Atoi(string(m[1]))
-		return GitHubStats{Username: username, Contributions: count}
+		return GitHubStats{Username: username, Contributions: count, Commits: a.getGitHubCommitsToday(username, "")}
 	}
-	return GitHubStats{Username: username, Contributions: 0}
+	return GitHubStats{Username: username, Contributions: 0, Commits: a.getGitHubCommitsToday(username, "")}
 }
 
 // GetDockerStats returns running/stopped container counts from the local Docker daemon.
@@ -635,7 +710,189 @@ func (a *App) GetDockerStats() DockerStats {
 			stopped++
 		}
 	}
-	return DockerStats{Running: running, Stopped: stopped, Total: len(containers)}
+
+	version := ""
+	if v, err := cli.ServerVersion(ctx); err == nil {
+		version = v.Version
+	}
+
+	return DockerStats{Running: running, Stopped: stopped, Total: len(containers), Version: version}
+}
+
+// dockerClient returns a Docker SDK client connected to the local unix socket
+// at /var/run/docker.sock with API-version negotiation enabled.
+func dockerClient() (*client.Client, error) {
+	return client.NewClientWithOpts(
+		client.WithHost("unix:///var/run/docker.sock"),
+		client.WithAPIVersionNegotiation(),
+	)
+}
+
+// cpuPercent computes CPU utilisation as a percentage from two consecutive
+// CPU stats samples (the current and the previous/pre-cpu stats), using the
+// Docker daemon's formula. Returns 0 if the delta is unavailable.
+func cpuPercent(previousCPU, previousSystem uint64, cpu container.CPUStats) float64 {
+	onlineCPUs := cpu.OnlineCPUs
+	if onlineCPUs == 0 && len(cpu.CPUUsage.PercpuUsage) > 0 {
+		onlineCPUs = uint32(len(cpu.CPUUsage.PercpuUsage))
+	}
+	if onlineCPUs == 0 {
+		onlineCPUs = 1
+	}
+	cpuDelta := float64(cpu.CPUUsage.TotalUsage - previousCPU)
+	systemDelta := float64(cpu.SystemUsage - previousSystem)
+	if systemDelta > 0 && cpuDelta > 0 {
+		return (cpuDelta / systemDelta) * float64(onlineCPUs) * 100.0
+	}
+	return 0
+}
+
+// GetContainers lists every container (running or stopped) on the local Docker
+// daemon and returns its metadata together with a one-shot CPU/Mem snapshot.
+// Exposed to the Wails frontend.
+func (a *App) GetContainers() ([]ContainerInfo, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	cli, err := dockerClient()
+	if err != nil {
+		return nil, err
+	}
+	defer cli.Close()
+
+	containers, err := cli.ContainerList(ctx, container.ListOptions{All: true})
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]ContainerInfo, 0, len(containers))
+	for _, c := range containers {
+		name := ""
+		if len(c.Names) > 0 {
+			name = strings.TrimPrefix(c.Names[0], "/")
+		}
+
+		info := ContainerInfo{
+			ID:     c.ID,
+			Name:   name,
+			Image:  c.Image,
+			State:  string(c.State),
+			Status: c.Status,
+		}
+
+		// Only fetch live stats for running containers; stopped containers
+		// report zero metrics.
+		if c.State == "running" {
+			if stats, err := cli.ContainerStatsOneShot(ctx, c.ID); err == nil {
+				var sr container.StatsResponse
+				if err := json.NewDecoder(stats.Body).Decode(&sr); err == nil {
+					info.CPUUsage = cpuPercent(
+						sr.PreCPUStats.CPUUsage.TotalUsage,
+						sr.PreCPUStats.SystemUsage,
+						sr.CPUStats,
+					)
+					if sr.MemoryStats.Usage > 0 {
+						info.MemUsage = sr.MemoryStats.Usage
+					}
+				}
+				_ = stats.Body.Close()
+			}
+		}
+
+		result = append(result, info)
+	}
+
+	return result, nil
+}
+
+// StreamContainerLogs fetches the last `lines` lines of logs for the given
+// container and returns them as plain text. Both stdout and stderr are
+// included; the multiplexed Docker stream header is stripped via stdcopy.
+// Exposed to the Wails frontend.
+func (a *App) StreamContainerLogs(containerID string, lines int) (string, error) {
+	if lines <= 0 {
+		lines = 100
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	cli, err := dockerClient()
+	if err != nil {
+		return "", err
+	}
+	defer cli.Close()
+
+	rc, err := cli.ContainerLogs(ctx, containerID, container.LogsOptions{
+		ShowStdout: true,
+		ShowStderr: true,
+		Tail:       strconv.Itoa(lines),
+	})
+	if err != nil {
+		return "", err
+	}
+	defer rc.Close()
+
+	// Buffer the entire stream first so the stdcopy fallback doesn't lose
+	// the initial bytes it consumed before failing on a non-multiplexed
+	// (TTY) stream.
+	raw, err := io.ReadAll(rc)
+	if err != nil {
+		return "", err
+	}
+
+	var buf strings.Builder
+	if _, err := stdcopy.StdCopy(&buf, &buf, bytes.NewReader(raw)); err != nil {
+		// Not multiplexed (TTY container) — return the raw bytes verbatim.
+		return string(raw), nil
+	}
+	return buf.String(), nil
+}
+
+// StopContainer gracefully stops a container by ID.
+// Exposed to the Wails frontend.
+func (a *App) StopContainer(id string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	cli, err := dockerClient()
+	if err != nil {
+		return err
+	}
+	defer cli.Close()
+
+	return cli.ContainerStop(ctx, id, container.StopOptions{})
+}
+
+// StartContainer starts a (stopped) container by ID.
+// Exposed to the Wails frontend.
+func (a *App) StartContainer(id string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	cli, err := dockerClient()
+	if err != nil {
+		return err
+	}
+	defer cli.Close()
+
+	return cli.ContainerStart(ctx, id, container.StartOptions{})
+}
+
+// DeleteContainer force-removes a container by ID. Force is required so that
+// running containers can be removed without a separate stop step.
+// Exposed to the Wails frontend.
+func (a *App) DeleteContainer(id string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	cli, err := dockerClient()
+	if err != nil {
+		return err
+	}
+	defer cli.Close()
+
+	return cli.ContainerRemove(ctx, id, container.RemoveOptions{Force: true})
 }
 
 // GetServerPing checks reachability and latency via ICMP ping (using the system ping command)

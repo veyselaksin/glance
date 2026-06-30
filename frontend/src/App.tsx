@@ -1,6 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Fragment } from 'react';
 import './App.css';
-import { SaveConfig, GetConfig, GetLastData, StartOAuthFlow, SignOut } from '../wailsjs/go/main/App';
+import { SaveConfig, GetConfig, GetLastData, StartOAuthFlow, SignOut, GetContainers, StopContainer, StartContainer, DeleteContainer, StreamContainerLogs } from '../wailsjs/go/main/App';
 import { EventsOn } from '../wailsjs/runtime/runtime';
 import { SignInPage } from './SignInPage';
 
@@ -16,9 +16,19 @@ interface Config {
 
 interface WidgetData {
   updated_at: string;
-  github: { username: string; contributions: number; error?: string };
-  docker: { running: number; stopped: number; total: number; error?: string };
+  github: { username: string; contributions: number; commits: number; error?: string };
+  docker: { running: number; stopped: number; total: number; version?: string; error?: string };
   server: { host: string; online: boolean; latency: number; error?: string };
+}
+
+interface ContainerInfo {
+  id: string;
+  name: string;
+  image: string;
+  state: string;
+  status: string;
+  cpu_usage: number;
+  mem_usage: number;
 }
 
 interface LogLine {
@@ -29,6 +39,252 @@ interface LogLine {
 }
 
 type TabId = 'overview' | 'github' | 'docker' | 'servers' | 'logs' | 'docs';
+
+// ─── Docker Containers Table ──────────────────────────────────────────────────
+
+function formatBytes(bytes: number): string {
+  if (!bytes || bytes <= 0) return '0 B';
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  let i = 0;
+  let val = bytes;
+  while (val >= 1024 && i < units.length - 1) {
+    val /= 1024;
+    i++;
+  }
+  return `${val.toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
+}
+
+function DockerContainers() {
+  const [containers, setContainers] = useState<ContainerInfo[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [logs, setLogs] = useState<string>('');
+  const [logsLoading, setLogsLoading] = useState(false);
+  const [logsError, setLogsError] = useState<string | null>(null);
+  const [actionPending, setActionPending] = useState<string | null>(null);
+  const logRef = useRef<HTMLDivElement>(null);
+
+  const fetchContainers = async () => {
+    try {
+      const list = await GetContainers();
+      setContainers(list ?? []);
+      setError(null);
+    } catch (e) {
+      setError(String(e));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchContainers();
+  }, []);
+
+  useEffect(() => {
+    if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
+  }, [logs]);
+
+  const handleLogs = async (id: string) => {
+    if (expandedId === id) {
+      setExpandedId(null);
+      return;
+    }
+    setExpandedId(id);
+    setLogsLoading(true);
+    setLogsError(null);
+    setLogs('');
+    try {
+      const text = await StreamContainerLogs(id, 200);
+      setLogs(text || '(no log output)');
+    } catch (e) {
+      setLogsError(String(e));
+    } finally {
+      setLogsLoading(false);
+    }
+  };
+
+  const handleStop = async (id: string) => {
+    setActionPending(id + ':stop');
+    try { await StopContainer(id); await fetchContainers(); }
+    catch (e) { setError(String(e)); }
+    finally { setActionPending(null); }
+  };
+
+  const handleStart = async (id: string) => {
+    setActionPending(id + ':start');
+    try { await StartContainer(id); await fetchContainers(); }
+    catch (e) { setError(String(e)); }
+    finally { setActionPending(null); }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Force-remove this container? This cannot be undone.')) return;
+    setActionPending(id + ':delete');
+    try { await DeleteContainer(id); await fetchContainers(); }
+    catch (e) { setError(String(e)); }
+    finally { setActionPending(null); }
+  };
+
+  return (
+    <div className="bg-surface-container border border-outline rounded-xl overflow-visible">
+      {/* Header row */}
+      <div className="flex items-center justify-between px-md py-sm border-b border-outline">
+        <div className="flex items-center gap-xs text-primary">
+          <span className="material-symbols-outlined" style={{ fontSize: 18 }}>view_list</span>
+          <span className="text-label-caps font-label-caps uppercase">Active Containers</span>
+        </div>
+        <button
+          onClick={fetchContainers}
+          className="flex items-center gap-xs text-on-surface-variant hover:text-primary transition-colors text-body-sm font-body-sm cursor-pointer"
+        >
+          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>refresh</span>
+          Refresh
+        </button>
+      </div>
+
+      {error && (
+        <div className="px-md py-sm text-error text-body-sm font-body-sm bg-error/10 border-b border-error/30">
+          {error}
+        </div>
+      )}
+
+      {loading ? (
+        <div className="px-md py-xl text-center text-on-surface-variant text-body-sm">
+          Loading containers…
+        </div>
+      ) : containers.length === 0 ? (
+        <div className="px-md py-xl text-center text-on-surface-variant text-body-sm italic">
+          No containers found. Is the Docker daemon running?
+        </div>
+      ) : (
+        <div>
+          <table className="w-full text-left text-body-sm border-collapse">
+            <thead className="text-on-surface-variant text-label-caps font-label-caps border-b border-outline">
+              <tr>
+                <th className="px-md py-sm font-semibold uppercase tracking-wider">Container Name</th>
+                <th className="px-md py-sm font-semibold uppercase tracking-wider hidden lg:table-cell">Image</th>
+                <th className="px-md py-sm font-semibold uppercase tracking-wider">Status</th>
+                <th className="px-md py-sm font-semibold uppercase tracking-wider hidden md:table-cell">CPU / RAM</th>
+                <th className="px-md py-sm font-semibold uppercase tracking-wider text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-outline/30">
+              {containers.map(c => {
+                const running = c.state === 'running';
+                const isExpanded = expandedId === c.id;
+                return (
+                  <Fragment key={c.id}>
+                    <tr className="hover:bg-white/5 transition-colors">
+                      <td className="px-md py-sm min-w-0">
+                        <div className="flex items-center gap-sm min-w-0">
+                          <span className={`w-2 h-2 rounded-full shrink-0 ${running ? 'bg-primary animate-status-pulse' : 'bg-warning'}`} />
+                          <span className="font-medium text-on-surface truncate">{c.name || c.id.slice(0, 12)}</span>
+                        </div>
+                      </td>
+                      <td className="px-md py-sm font-code-sm text-on-surface-variant max-w-[200px] truncate hidden lg:table-cell" title={c.image}>{c.image}</td>
+                      <td className="px-md py-sm">
+                        <span className={`inline-block px-1.5 py-0.5 rounded text-[11px] font-code-sm ${
+                          running ? 'bg-primary/10 text-primary' : 'bg-warning/10 text-warning'
+                        }`}>
+                          {c.status || c.state}
+                        </span>
+                      </td>
+                      <td className="px-md py-sm font-code-sm text-on-surface-variant hidden md:table-cell">
+                        {running ? `${c.cpu_usage.toFixed(1)}% / ${formatBytes(c.mem_usage)}` : '—'}
+                      </td>
+                      <td className="px-md py-sm">
+                        <div className="flex items-center justify-end gap-xs">
+                          {/* Stop / Start toggle */}
+                          {running ? (
+                            <button
+                              onClick={() => handleStop(c.id)}
+                              disabled={actionPending === c.id + ':stop'}
+                              aria-label="Stop container"
+                              className="group relative flex items-center justify-center w-7 h-7 rounded text-on-surface-variant hover:text-warning hover:bg-warning/10 transition-colors cursor-pointer disabled:opacity-40"
+                            >
+                              <span className={`material-symbols-outlined ${actionPending !== c.id + ':stop' ? 'filled' : ''}`} style={{ fontSize: 18 }}>
+                                {actionPending === c.id + ':stop' ? 'progress_activity' : 'stop_circle'}
+                              </span>
+                              <span className="pointer-events-none absolute -top-7 left-1/2 -translate-x-1/2 whitespace-nowrap px-1.5 py-0.5 rounded bg-surface-container-highest border border-outline text-[10px] text-on-surface font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-100 z-20">Stop</span>
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleStart(c.id)}
+                              disabled={actionPending === c.id + ':start'}
+                              aria-label="Start container"
+                              className="group relative flex items-center justify-center w-7 h-7 rounded text-on-surface-variant hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer disabled:opacity-40"
+                            >
+                              <span className={`material-symbols-outlined ${actionPending !== c.id + ':start' ? 'filled' : ''}`} style={{ fontSize: 18 }}>
+                                {actionPending === c.id + ':start' ? 'progress_activity' : 'play_circle'}
+                              </span>
+                              <span className="pointer-events-none absolute -top-7 left-1/2 -translate-x-1/2 whitespace-nowrap px-1.5 py-0.5 rounded bg-surface-container-highest border border-outline text-[10px] text-on-surface font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-100 z-20">Start</span>
+                            </button>
+                          )}
+                          {/* View Logs */}
+                          <button
+                            onClick={() => handleLogs(c.id)}
+                            aria-label={isExpanded ? 'Hide logs' : 'View logs'}
+                            className={`group relative flex items-center justify-center w-7 h-7 rounded transition-colors cursor-pointer ${
+                              isExpanded ? 'text-primary bg-primary/10' : 'text-on-surface-variant hover:text-primary hover:bg-primary/10'
+                            }`}
+                          >
+                            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>receipt_long</span>
+                            <span className="pointer-events-none absolute -top-7 left-1/2 -translate-x-1/2 whitespace-nowrap px-1.5 py-0.5 rounded bg-surface-container-highest border border-outline text-[10px] text-on-surface font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-100 z-20">{isExpanded ? 'Hide logs' : 'View logs'}</span>
+                          </button>
+                          {/* Delete (warning state) */}
+                          <button
+                            onClick={() => handleDelete(c.id)}
+                            disabled={actionPending === c.id + ':delete'}
+                            aria-label="Delete container"
+                            className="group relative flex items-center justify-center w-7 h-7 rounded text-on-surface-variant hover:text-error hover:bg-error/10 transition-colors cursor-pointer disabled:opacity-40"
+                          >
+                            <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
+                              {actionPending === c.id + ':delete' ? 'progress_activity' : 'delete_forever'}
+                            </span>
+                            <span className="pointer-events-none absolute -top-7 left-1/2 -translate-x-1/2 whitespace-nowrap px-1.5 py-0.5 rounded bg-surface-container-highest border border-outline text-[10px] text-on-surface font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-100 z-20">Delete</span>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                    {/* Expandable log panel */}
+                    {isExpanded && (
+                      <tr>
+                        <td colSpan={5} className="px-md py-sm bg-black/50 border-t border-outline/50">
+                          <div className="rounded-lg border border-outline/60 overflow-hidden">
+                            <div className="flex items-center justify-between px-sm py-xs bg-surface-container-high border-b border-outline">
+                              <div className="flex items-center gap-xs text-primary">
+                                <span className="material-symbols-outlined" style={{ fontSize: 14 }}>subject</span>
+                                <span className="text-label-caps font-label-caps uppercase">Container Logs — {c.name}</span>
+                              </div>
+                              <span className="text-[11px] text-on-surface-variant font-code-sm">last 200 lines</span>
+                            </div>
+                            <div
+                              ref={logRef}
+                              className="p-md max-h-96 overflow-y-auto custom-scrollbar bg-black/60 font-mono text-code-sm text-on-surface-variant whitespace-pre-wrap break-all leading-relaxed select-text"
+                            >
+                              {logsLoading ? (
+                                <span className="text-primary/70">Fetching logs…</span>
+                              ) : logsError ? (
+                                <span className="text-error">{logsError}</span>
+                              ) : (
+                                logs
+                              )}
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ─── Dashboard — exactly matches glance_dashboard_macos_blue ──────────────────
 
@@ -57,6 +313,8 @@ function Dashboard({
   onClearLogs: () => void;
 }) {
   const [tab, setTab] = useState<TabId>('overview');
+  const [showToken, setShowToken] = useState(false);
+  const [showSecret, setShowSecret] = useState(false);
   const logRef = useRef<HTMLDivElement>(null);
 
   const fmtTime = (iso: string) => {
@@ -135,20 +393,20 @@ function Dashboard({
       {/* ── Main Canvas ─────────────────────────────────────────────────── */}
       <main className="ml-[240px] flex-1 flex flex-col h-screen overflow-hidden relative bg-background">
         {/* Top Bar */}
-        <header className="h-24 flex justify-between items-center w-full px-md py-sm bg-background border-b border-outline z-40 mac-drag">
-          <div className="flex items-center gap-md mac-no-drag">
-            <h2 className="text-headline-md font-headline-md font-bold text-on-surface tracking-tight">System Console</h2>
-            <div className="h-4 w-px bg-outline" />
-            <div className="flex items-center gap-xs px-sm py-xs bg-surface-container rounded border border-outline">
-              <span className="material-symbols-outlined text-primary" style={{ fontSize: 14 }}>terminal</span>
-              <span className="text-code-sm font-code-sm text-primary">usr/bin/glance-agent --active</span>
+        <header className="min-h-[72px] flex flex-wrap justify-between items-center w-full px-md py-sm bg-background border-b border-outline z-40 mac-drag gap-sm">
+          <div className="flex items-center gap-sm md:gap-md mac-no-drag min-w-0">
+            <h2 className="text-headline-md font-headline-md font-bold text-on-surface tracking-tight truncate">System Console</h2>
+            <div className="hidden md:block h-4 w-px bg-outline shrink-0" />
+            <div className="hidden lg:flex items-center gap-xs px-sm py-xs bg-surface-container rounded border border-outline min-w-0">
+              <span className="material-symbols-outlined text-primary shrink-0" style={{ fontSize: 14 }}>terminal</span>
+              <span className="text-code-sm font-code-sm text-primary truncate">usr/bin/glance-agent --active</span>
             </div>
           </div>
-          <div className="flex items-center gap-sm mac-no-drag">
+          <div className="flex items-center gap-sm mac-no-drag shrink-0">
             <button className="flex items-center gap-xs px-sm py-xs text-on-surface-variant hover:text-on-surface transition-colors rounded cursor-pointer">
               <span className="material-symbols-outlined" style={{ fontSize: 20 }}>sensors</span>
             </button>
-            <div className="text-body-sm font-body-sm text-on-surface-variant">
+            <div className="text-body-sm font-body-sm text-on-surface-variant whitespace-nowrap">
               Last Sync: {data ? fmtTime(data.updated_at) : '—'}
             </div>
           </div>
@@ -184,13 +442,18 @@ function Dashboard({
                       <div className="relative">
                         <input
                           className="mac-input pr-8"
-                          type="password"
-                          value={cfg.github_token ? '••••••••••••••••••••••••' : ''}
+                          type={showToken ? 'text' : 'password'}
+                          value={cfg.github_token}
                           readOnly
                           placeholder="Not connected"
                         />
-                        <button className="absolute right-2 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary transition-colors cursor-pointer">
-                          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>visibility</span>
+                        <button
+                          type="button"
+                          onClick={() => setShowToken(v => !v)}
+                          aria-label={showToken ? 'Hide token' : 'Show token'}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary transition-colors cursor-pointer"
+                        >
+                          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>{showToken ? 'visibility_off' : 'visibility'}</span>
                         </button>
                       </div>
                       <p className="text-[11px] text-on-surface-variant/60 font-body-sm">Required for repo discovery and CI/CD triggers.</p>
@@ -214,9 +477,21 @@ function Dashboard({
                       </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Docker Daemon Card */}
+                  {/* Today's activity stats */}
+                  {data?.github && !data.github.error && (
+                    <div className="grid grid-cols-2 gap-sm mt-md pt-md border-t border-outline">
+                      <div className="bg-background border border-outline rounded-lg p-sm text-center">
+                        <div className="text-label-caps font-label-caps text-on-surface-variant mb-xs">COMMITS TODAY</div>
+                        <div className="text-[22px] font-bold text-primary font-mono leading-none">{data.github.commits}</div>
+                      </div>
+                      <div className="bg-background border border-outline rounded-lg p-sm text-center">
+                        <div className="text-label-caps font-label-caps text-on-surface-variant mb-xs">CONTRIBUTIONS</div>
+                        <div className="text-[22px] font-bold text-on-surface font-mono leading-none">{data.github.contributions}</div>
+                      </div>
+                    </div>
+                  )}
+                </div>
                 <div className="col-span-12 lg:col-span-4 bg-surface-container border border-outline rounded-xl p-md flex flex-col group hover:border-primary transition-colors">
                   <div className="flex items-center gap-xs text-primary mb-1">
                     <span className="material-symbols-outlined" style={{ fontSize: 16 }}>terminal</span>
@@ -310,7 +585,7 @@ function Dashboard({
 
           {/* ── GITHUB SETTINGS ── */}
           {tab === 'github' && (
-            <div className="max-w-2xl animate-page-in space-y-xl">
+            <div className="max-w-2xl mx-auto animate-page-in space-y-xl">
               <div className="mb-md">
                 <h3 className="text-headline-lg font-headline-lg text-on-surface mb-xs">GitHub Settings</h3>
                 <p className="text-on-surface-variant font-body-md">Manage your GitHub OAuth application credentials.</p>
@@ -341,15 +616,20 @@ function Dashboard({
                     <div className="relative">
                       <input
                         className="mac-input pr-8"
-                        type="password"
+                        type={showSecret ? 'text' : 'password'}
                         value={cfg.client_secret}
                         onChange={e => onUpdate('client_secret', e.target.value)}
                         placeholder="••••••••••••••••••••"
                         spellCheck={false}
                         autoComplete="off"
                       />
-                      <button className="absolute right-2 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary transition-colors cursor-pointer">
-                        <span className="material-symbols-outlined" style={{ fontSize: 16 }}>visibility</span>
+                      <button
+                        type="button"
+                        onClick={() => setShowSecret(v => !v)}
+                        aria-label={showSecret ? 'Hide secret' : 'Show secret'}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary transition-colors cursor-pointer"
+                      >
+                        <span className="material-symbols-outlined" style={{ fontSize: 16 }}>{showSecret ? 'visibility_off' : 'visibility'}</span>
                       </button>
                     </div>
                     <p className="text-[11px] text-on-surface-variant/60 font-body-sm">
@@ -390,18 +670,22 @@ function Dashboard({
 
           {/* ── DOCKER DAEMON ── */}
           {tab === 'docker' && (
-            <div className="max-w-2xl animate-page-in space-y-xl">
+            <div className="w-full max-w-[1600px] animate-page-in space-y-xl">
               <div className="mb-md">
-                <h3 className="text-headline-lg font-headline-lg text-on-surface mb-xs">Docker Daemon</h3>
+                <h3 className="text-headline-md md:text-headline-lg font-headline-lg text-on-surface mb-xs">Docker Daemon</h3>
                 <p className="text-on-surface-variant font-body-md">Local Docker runtime statistics and socket configuration.</p>
               </div>
 
               <div className="bg-surface-container border border-outline rounded-xl p-md">
-                <div className="flex items-center gap-xs text-primary mb-1">
-                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>terminal</span>
-                  <span className="text-label-caps font-label-caps uppercase">Runtime</span>
+              <div className="flex flex-wrap items-start justify-between gap-sm mb-md">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-xs text-primary mb-1">
+                    <span className="material-symbols-outlined" style={{ fontSize: 16 }}>terminal</span>
+                    <span className="text-label-caps font-label-caps uppercase">Runtime</span>
+                  </div>
+                  <h4 className="text-headline-sm font-headline-sm text-on-surface">Docker Daemon</h4>
                 </div>
-                <h4 className="text-headline-sm font-headline-sm text-on-surface mb-md">Docker Daemon</h4>
+              </div>
 
                 <div className="space-y-md">
                   <div className="space-y-sm">
@@ -409,7 +693,7 @@ function Dashboard({
                     <input className="mac-input" type="text" value="/var/run/docker.sock" readOnly />
                   </div>
 
-                  <div className="grid grid-cols-3 gap-md pt-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-md pt-2">
                     <div className="bg-background border border-outline rounded-lg p-md text-center">
                       <div className="text-label-caps font-label-caps text-on-surface-variant mb-sm">RUNNING</div>
                       <div className="text-[28px] font-bold text-primary font-mono leading-none">
@@ -439,16 +723,19 @@ function Dashboard({
                   </div>
                   <div className="flex items-center justify-between text-body-sm">
                     <span className="text-on-surface-variant">Version</span>
-                    <span className="text-on-surface font-code-sm">24.0.7-ce</span>
+                    <span className="text-on-surface font-code-sm">{data?.docker.version || '—'}</span>
                   </div>
                 </div>
               </div>
+
+              {/* Container list with logs & lifecycle actions */}
+              <DockerContainers />
             </div>
           )}
 
           {/* ── SERVERS/VPS ── */}
           {tab === 'servers' && (
-            <div className="max-w-2xl animate-page-in space-y-xl">
+            <div className="max-w-2xl mx-auto animate-page-in space-y-xl">
               <div className="mb-md">
                 <h3 className="text-headline-lg font-headline-lg text-on-surface mb-xs">Servers / VPS</h3>
                 <p className="text-on-surface-variant font-body-md">Track remote infrastructure latency and uptime.</p>
@@ -552,7 +839,7 @@ function Dashboard({
 
           {/* ── DOCS ── */}
           {tab === 'docs' && (
-            <div className="max-w-2xl animate-page-in space-y-xl">
+            <div className="max-w-2xl mx-auto animate-page-in space-y-xl">
               <div className="mb-md">
                 <h3 className="text-headline-lg font-headline-lg text-on-surface mb-xs">Documentation</h3>
                 <p className="text-on-surface-variant font-body-md">Learn how Glance's hybrid architecture works.</p>
