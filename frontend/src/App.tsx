@@ -3,8 +3,20 @@ import './App.css';
 import { SaveConfig, GetConfig, GetLastData, StartOAuthFlow, SignOut, GetContainers, StopContainer, StartContainer, DeleteContainer, StreamContainerLogs } from '../wailsjs/go/main/App';
 import { EventsOn } from '../wailsjs/runtime/runtime';
 import { SignInPage } from './SignInPage';
+import { ServersView } from './ServersView';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+
+interface ServerConfig {
+  id: string;
+  name: string;
+  ip: string;
+  port: number;
+  username: string;
+  auth_method: string;
+  password?: string;
+  private_key_path?: string;
+}
 
 interface Config {
   github_username: string;
@@ -12,6 +24,7 @@ interface Config {
   client_id: string;
   client_secret: string;
   server_host: string;
+  servers: ServerConfig[];
 }
 
 interface WidgetData {
@@ -525,7 +538,7 @@ function Dashboard({
                 </div>
 
                 {/* Remote Servers Card */}
-                <div className="col-span-12 bg-surface-container border border-outline rounded-xl p-md flex flex-col group hover:border-primary transition-colors">
+                <div className="col-span-12 bg-surface-container border border-outline rounded-xl p-md flex flex-col">
                   <div className="flex justify-between items-center mb-md">
                     <div>
                       <div className="flex items-center gap-xs text-primary mb-1">
@@ -534,7 +547,10 @@ function Dashboard({
                       </div>
                       <h4 className="text-headline-sm font-headline-sm text-on-surface">Remote Servers</h4>
                     </div>
-                    <button className="flex items-center gap-xs bg-background border border-outline px-md py-1.5 rounded font-body-sm text-body-sm hover:bg-white/5 transition-colors cursor-pointer">
+                    <button
+                      onClick={() => setTab('servers')}
+                      className="flex items-center gap-xs bg-background border border-outline px-md py-1.5 rounded font-body-sm text-body-sm hover:bg-white/5 transition-colors cursor-pointer"
+                    >
                       <span className="material-symbols-outlined" style={{ fontSize: 16 }}>add</span>
                       Add Node
                     </button>
@@ -552,7 +568,7 @@ function Dashboard({
                       </thead>
                       <tbody className="divide-y divide-outline/30">
                         {cfg.server_host ? (
-                          <tr className="hover:bg-white/5 transition-colors">
+                          <tr>
                             <td className="py-md font-medium text-on-surface">{cfg.server_host}</td>
                             <td className="py-md font-code-sm text-on-surface-variant">{cfg.server_host}</td>
                             <td className="py-md font-code-sm text-on-surface-variant">ICMP/HTTP</td>
@@ -565,7 +581,13 @@ function Dashboard({
                               ) : '—'}
                             </td>
                             <td className="py-md text-right">
-                              <span className="material-symbols-outlined text-on-surface-variant cursor-pointer hover:text-primary transition-colors" style={{ fontSize: 20 }}>settings</span>
+                              <button
+                                onClick={() => setTab('servers')}
+                                aria-label="Server settings"
+                                className="text-on-surface-variant cursor-pointer hover:text-primary transition-colors"
+                              >
+                                <span className="material-symbols-outlined" style={{ fontSize: 20 }}>settings</span>
+                              </button>
                             </td>
                           </tr>
                         ) : (
@@ -735,67 +757,7 @@ function Dashboard({
 
           {/* ── SERVERS/VPS ── */}
           {tab === 'servers' && (
-            <div className="max-w-2xl mx-auto animate-page-in space-y-xl">
-              <div className="mb-md">
-                <h3 className="text-headline-lg font-headline-lg text-on-surface mb-xs">Servers / VPS</h3>
-                <p className="text-on-surface-variant font-body-md">Track remote infrastructure latency and uptime.</p>
-              </div>
-
-              <div className="bg-surface-container border border-outline rounded-xl p-md">
-                <div className="flex justify-between items-center mb-md">
-                  <div>
-                    <div className="flex items-center gap-xs text-primary mb-1">
-                      <span className="material-symbols-outlined" style={{ fontSize: 16 }}>dns</span>
-                      <span className="text-label-caps font-label-caps uppercase">Infrastructure</span>
-                    </div>
-                    <h4 className="text-headline-sm font-headline-sm text-on-surface">Remote Servers</h4>
-                  </div>
-                </div>
-
-                <div className="space-y-md">
-                  <div className="space-y-sm">
-                    <label className="block text-label-caps font-label-caps text-on-surface-variant">Server Host / IP</label>
-                    <input
-                      className="mac-input"
-                      value={cfg.server_host}
-                      onChange={e => onUpdate('server_host', e.target.value)}
-                      placeholder="e.g. 192.168.1.42 or vps.example.com"
-                      spellCheck={false}
-                      autoComplete="off"
-                    />
-                    <p className="text-[11px] text-on-surface-variant/60 font-body-sm">
-                      Glance will continuously ping this host using ICMP, falling back to HTTPS checks.
-                    </p>
-                  </div>
-
-                  {data?.server && (
-                    <div className="pt-md border-t border-outline">
-                      <div className="flex items-center justify-between text-body-sm">
-                        <span className="text-on-surface-variant">Current Status</span>
-                        <span className={`flex items-center gap-1.5 font-semibold ${data.server.online ? 'text-primary' : 'text-warning'}`}>
-                          <span className={`w-2 h-2 rounded-full ${data.server.online ? 'bg-primary animate-status-pulse' : 'bg-warning'}`} />
-                          {data.server.online ? `Online — ${data.server.latency.toFixed(1)} ms` : 'Offline / Unreachable'}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between text-body-sm mt-2">
-                        <span className="text-on-surface-variant">Host</span>
-                        <span className="font-code-sm text-on-surface">{data.server.host || cfg.server_host || '—'}</span>
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="flex justify-end">
-                    <button
-                      onClick={onSave}
-                      disabled={saving || !dirty}
-                      className="bg-primary text-on-primary px-md py-1.5 rounded font-body-sm text-body-sm font-semibold hover:brightness-110 active:scale-95 duration-100 transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
-                    >
-                      {saving ? 'Saving…' : flash === 'saved' ? 'Saved ✓' : 'Save Server Target'}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <ServersView />
           )}
 
           {/* ── LOGS ── */}
@@ -960,6 +922,7 @@ export default function App() {
     client_id: '',
     client_secret: '',
     server_host: '',
+    servers: [],
   });
   const [data, setData]           = useState<WidgetData | null>(null);
   const [saving, setSaving]       = useState(false);
@@ -1011,11 +974,16 @@ export default function App() {
       pushLog(payload.tag || 'SYS', payload.msg || '');
     });
 
+    const offData = EventsOn('data_updated', (d: WidgetData) => {
+      if (d?.updated_at) setData(d);
+    });
+
     return () => {
       clearInterval(pollId);
       offSuccess();
       offError();
       offLog();
+      offData();
     };
   }, []);
 
@@ -1028,7 +996,7 @@ export default function App() {
   async function save() {
     setSaving(true);
     try {
-      await SaveConfig(cfg);
+      await SaveConfig(cfg as any);
       setDirty(false);
       setFlash('saved');
       pushLog('SYS', 'Configuration saved.');

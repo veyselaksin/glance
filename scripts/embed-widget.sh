@@ -63,6 +63,15 @@ mkdir -p "$PLUGINS"
 rm -rf "$APPEX_DST"
 ditto "$APPEX_SRC" "$APPEX_DST"
 
+# Copy the host app's icon into the appex Resources so the widget shows
+# the app icon in the "Edit Widgets" gallery.
+APPEX_RES="$APPEX_DST/Contents/Resources"
+mkdir -p "$APPEX_RES"
+if [[ -f "$APP_BUNDLE/Contents/Resources/iconfile.icns" ]]; then
+  ditto "$APP_BUNDLE/Contents/Resources/iconfile.icns" "$APPEX_RES/iconfile.icns"
+  echo "embed-widget: copied app icon into appex"
+fi
+
 # Match the host app's signing identity (ad-hoc "-" when no Developer ID).
 SIGN_ID="-"
 if AUTHORITY="$(codesign -dv "$APP_BUNDLE" 2>&1 | awk -F= '/Authority=/{print $2; exit}')"; then
@@ -72,8 +81,20 @@ if AUTHORITY="$(codesign -dv "$APP_BUNDLE" 2>&1 | awk -F= '/Authority=/{print $2
 fi
 
 echo "embed-widget: re-signing with identity: ${SIGN_ID}"
+
+# Sign the appex FIRST with its entitlements, then sign the host app
+# WITHOUT --deep. Using --deep on the host would re-sign the appex
+# without entitlements, breaking the sandbox — which prevents macOS
+# from loading the widget at all.
 codesign --force --sign "$SIGN_ID" --entitlements "$ENTITLEMENTS" --timestamp=none "$APPEX_DST"
-codesign --force --deep --sign "$SIGN_ID" --timestamp=none "$APP_BUNDLE"
+echo "embed-widget: signed appex with entitlements"
+
+codesign --force --sign "$SIGN_ID" --timestamp=none "$APP_BUNDLE"
+echo "embed-widget: signed host app (no --deep, preserves appex)"
+
+# Verify the entitlements are embedded
+echo "embed-widget: verifying appex entitlements..."
+codesign -d --entitlements - "$APPEX_DST" 2>&1 | grep -q "app-sandbox" && echo "  ✓ app-sandbox present" || echo "  ✗ app-sandbox MISSING"
 
 "$LSREGISTER" -f -R -trusted "$APP_BUNDLE"
 

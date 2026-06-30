@@ -16,8 +16,8 @@ struct GlanceData: Codable {
 
     static let placeholder = GlanceData(
         updatedAt: "",
-        github: GlanceGitHub(username: "you", contributions: 0, error: nil),
-        docker: GlanceDocker(running: 0, stopped: 0, total: 0, error: nil),
+        github: GlanceGitHub(username: "you", contributions: 0, commits: 0, error: nil),
+        docker: GlanceDocker(running: 0, stopped: 0, total: 0, version: nil, error: nil),
         server: GlanceServer(host: "server", online: true, latency: 0, error: nil)
     )
 }
@@ -25,6 +25,7 @@ struct GlanceData: Codable {
 struct GlanceGitHub: Codable {
     let username: String
     let contributions: Int
+    let commits: Int
     let error: String?
 }
 
@@ -32,6 +33,7 @@ struct GlanceDocker: Codable {
     let running: Int
     let stopped: Int
     let total: Int
+    let version: String?
     let error: String?
 }
 
@@ -70,15 +72,19 @@ struct GlanceProvider: TimelineProvider {
     }
 
     // Reads ~/Library/Application Support/Glance/widget_data.json.
-    // Access is granted via a sandbox temporary exception in GlanceWidget.entitlements.
     private func readData() -> GlanceData? {
         let url = FileManager.default.homeDirectoryForCurrentUser
             .appendingPathComponent("Library/Application Support/Glance/widget_data.json")
-        guard
-            let raw     = try? Data(contentsOf: url),
-            let decoded = try? JSONDecoder().decode(GlanceData.self, from: raw)
-        else { return nil }
-        return decoded
+        do {
+            let raw = try Data(contentsOf: url)
+            let decoded = try JSONDecoder().decode(GlanceData.self, from: raw)
+            return decoded
+        } catch {
+            #if DEBUG
+            print("[GlanceWidget] Failed to read/decode: \(error)")
+            #endif
+            return nil
+        }
     }
 }
 
@@ -162,11 +168,11 @@ struct GitHubColumn: View {
             if let err = gh.error, !err.isEmpty {
                 Text("Error").font(.system(size: 10)).foregroundColor(.red)
             } else {
-                Text("\(gh.contributions)")
+                Text("\(gh.commits)")
                     .font(.system(size: 26, weight: .bold, design: .rounded))
                     .foregroundColor(.primary)
                     .minimumScaleFactor(0.7)
-                Text("today")
+                Text("commits today")
                     .font(.system(size: 8))
                     .foregroundColor(.secondary)
             }
@@ -177,7 +183,7 @@ struct GitHubColumn: View {
             HStack(spacing: 2) {
                 ForEach(0..<7, id: \.self) { i in
                     RoundedRectangle(cornerRadius: 1.5)
-                        .fill(i < min(gh.contributions, 7) ? blue : Color.secondary.opacity(0.2))
+                        .fill(i < min(gh.commits, 7) ? blue : Color.secondary.opacity(0.2))
                         .frame(width: 6, height: 6)
                 }
             }
@@ -313,7 +319,7 @@ struct SmallView: View {
             HStack(spacing: 4) {
                 Image(systemName: "chevron.left.forwardslash.chevron.right")
                     .font(.system(size: 8)).foregroundColor(.secondary).frame(width: 11)
-                Text("\(data.github.contributions)")
+                Text("\(data.github.commits)")
                     .font(.system(size: 18, weight: .bold, design: .rounded))
                 Text("commits")
                     .font(.system(size: 9)).foregroundColor(.secondary)

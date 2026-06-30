@@ -30,11 +30,24 @@ import (
 
 // Config holds user-configurable tracking targets, persisted in config.json.
 type Config struct {
-	GitHubUsername string `json:"github_username"`
-	GitHubToken    string `json:"github_token"`
-	ClientID       string `json:"client_id"`
-	ClientSecret   string `json:"client_secret"`
-	ServerHost     string `json:"server_host"`
+	GitHubUsername string         `json:"github_username"`
+	GitHubToken    string         `json:"github_token"`
+	ClientID       string         `json:"client_id"`
+	ClientSecret   string         `json:"client_secret"`
+	ServerHost     string         `json:"server_host"`
+	Servers        []ServerConfig `json:"servers"`
+}
+
+// ServerConfig describes a saved SSH-reachable VPS or server.
+type ServerConfig struct {
+	ID             string `json:"id"`
+	Name           string `json:"name"`
+	IP             string `json:"ip"`
+	Port           int    `json:"port"`
+	Username       string `json:"username"`
+	AuthMethod     string `json:"auth_method"` // "password" or "private_key"
+	Password       string `json:"password,omitempty"`
+	PrivateKeyPath string `json:"private_key_path,omitempty"`
 }
 
 // GitHubStats holds today's contribution data.
@@ -86,15 +99,17 @@ type WidgetData struct {
 
 // App is the Wails application struct bound to the frontend.
 type App struct {
-	ctx  context.Context
-	mu   sync.RWMutex
-	cfg  Config
-	last WidgetData
+	ctx      context.Context
+	mu       sync.RWMutex
+	cfg      Config
+	last     WidgetData
+	sshMu    sync.Mutex
+	sessions map[string]*sshSession
 }
 
 // NewApp creates a new App.
 func NewApp() *App {
-	return &App{}
+	return &App{sessions: make(map[string]*sshSession)}
 }
 
 // startup is called by Wails when the app starts.
@@ -102,6 +117,10 @@ func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 	registerWidgetHostApp()
 	a.cfg = a.loadConfig()
+	// Ensure the SSH key storage directory exists at ~/.glance/ssh_keys/
+	if _, err := sshKeyDir(); err != nil {
+		fmt.Printf("[SSH] warning: could not create key dir: %v\n", err)
+	}
 	go a.tickerLoop(ctx)
 }
 
@@ -162,6 +181,7 @@ func (a *App) refresh() {
 
 	_ = a.writeWidgetData(data)
 	runtime.EventsEmit(a.ctx, "agent_log", map[string]string{"tag": "SYS", "msg": "Metrics written to widget_data.json"})
+	runtime.EventsEmit(a.ctx, "data_updated", data)
 }
 
 // ─── Data directory & persistence ─────────────────────────────────────────────
@@ -458,7 +478,20 @@ func (a *App) SignOut() error {
 
 // ─── Metrics ──────────────────────────────────────────────────────────────────
 
-// GetGitHubStats fetches today's GitHub contribution count (using token or scraper).
+// GetGitHubStats fetches today's GitHub contribution and commit counts.
+//
+// Two independent data sources are used:
+//  1. GraphQL contributionCalendar → "contributions" (the GitHub graph number).
+//     This is GitHub's calibrated count but has a processing delay of minutes
+//     to hours, so it may lag behind actual activity.
+//  2. REST /user/repos + /repos/{owner}/{repo}/commits → "commits" (actual
+//     pushed commits today). This is immediate and includes private repos
+//     (token has `repo` scope).
+//
+// "Today" is defined as midnight in the user's *local* machine timezone,
+// converted to UTC for the API `since` parameter. This ensures a commit at
+// 22:00 UTC on June 30 counts as "today" for a UTC+3 user whose local date
+// is already July 1.
 func (a *App) GetGitHubStats(username string) GitHubStats {
 	a.mu.RLock()
 	token := a.cfg.GitHubToken
@@ -472,6 +505,23 @@ func (a *App) GetGitHubStats(username string) GitHubStats {
 		return a.getGitHubStatsScraper(username)
 	}
 
+	contributions := a.getContributionsToday(username, token)
+	commits := a.getGitHubCommitsToday(username, token)
+
+	fmt.Printf("[GITHUB] user=%s contributions=%d commits=%d\n", username, contributions, commits)
+
+	return GitHubStats{
+		Username:      username,
+		Contributions: contributions,
+		Commits:       commits,
+	}
+}
+
+// getContributionsToday queries the GraphQL contributionCalendar and returns
+// today's contribution count. GitHub's calendar is ordered chronologically;
+// the last entry is today (in GitHub's configured timezone). We try matching
+// against both local and UTC dates, then fall back to the last calendar day.
+func (a *App) getContributionsToday(username, token string) int {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -480,6 +530,7 @@ func (a *App) GetGitHubStats(username string) GitHubStats {
 			user(login: $username) {
 				contributionsCollection {
 					contributionCalendar {
+						totalContributions
 						weeks {
 							contributionDays {
 								contributionCount
@@ -490,19 +541,18 @@ func (a *App) GetGitHubStats(username string) GitHubStats {
 				}
 			}
 		}`,
-		"variables": map[string]string{
-			"username": username,
-		},
+		"variables": map[string]string{"username": username},
 	}
 
 	reqBytes, err := json.Marshal(query)
 	if err != nil {
-		return GitHubStats{Username: username, Error: err.Error()}
+		fmt.Printf("[GITHUB] GraphQL marshal error: %v\n", err)
+		return 0
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://api.github.com/graphql", strings.NewReader(string(reqBytes)))
 	if err != nil {
-		return GitHubStats{Username: username, Error: err.Error()}
+		return 0
 	}
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("Content-Type", "application/json")
@@ -510,12 +560,14 @@ func (a *App) GetGitHubStats(username string) GitHubStats {
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return GitHubStats{Username: username, Error: err.Error()}
+		fmt.Printf("[GITHUB] GraphQL request error: %v\n", err)
+		return 0
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return GitHubStats{Username: username, Error: fmt.Sprintf("GraphQL HTTP %d", resp.StatusCode)}
+		fmt.Printf("[GITHUB] GraphQL HTTP %d\n", resp.StatusCode)
+		return 0
 	}
 
 	var res struct {
@@ -523,7 +575,8 @@ func (a *App) GetGitHubStats(username string) GitHubStats {
 			User struct {
 				ContributionsCollection struct {
 					ContributionCalendar struct {
-						Weeks []struct {
+						TotalContributions int `json:"totalContributions"`
+						Weeks              []struct {
 							ContributionDays []struct {
 								ContributionCount int    `json:"contributionCount"`
 								Date              string `json:"date"`
@@ -539,106 +592,181 @@ func (a *App) GetGitHubStats(username string) GitHubStats {
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(&res); err != nil {
-		return GitHubStats{Username: username, Error: err.Error()}
+		fmt.Printf("[GITHUB] GraphQL decode error: %v\n", err)
+		return 0
 	}
 
 	if len(res.Errors) > 0 {
-		return GitHubStats{Username: username, Error: res.Errors[0].Message}
+		fmt.Printf("[GITHUB] GraphQL errors: %s\n", res.Errors[0].Message)
+		return 0
 	}
 
-	todayLocal := time.Now().Format("2006-01-02")
-	todayUTC := time.Now().UTC().Format("2006-01-02")
-	contributions := 0
-	found := false
-
-	// Scan calendar to find today's entry
-	for i := len(res.Data.User.ContributionsCollection.ContributionCalendar.Weeks) - 1; i >= 0; i-- {
-		week := res.Data.User.ContributionsCollection.ContributionCalendar.Weeks[i]
-		for j := len(week.ContributionDays) - 1; j >= 0; j-- {
-			day := week.ContributionDays[j]
-			if day.Date == todayLocal || day.Date == todayUTC {
-				contributions = day.ContributionCount
-				found = true
-				break
-			}
+	// Collect all days from all weeks into a flat slice.
+	weeks := res.Data.User.ContributionsCollection.ContributionCalendar.Weeks
+	type dayEntry struct {
+		ContributionCount int
+		Date              string
+	}
+	var allDays []dayEntry
+	for _, w := range weeks {
+		for _, d := range w.ContributionDays {
+			allDays = append(allDays, dayEntry{ContributionCount: d.ContributionCount, Date: d.Date})
 		}
-		if found {
-			break
+	}
+	if len(allDays) == 0 {
+		return 0
+	}
+
+	fmt.Printf("[GITHUB] calendar totalContributions=%d, lastDay=%s count=%d\n",
+		res.Data.User.ContributionsCollection.ContributionCalendar.TotalContributions,
+		allDays[len(allDays)-1].Date,
+		allDays[len(allDays)-1].ContributionCount)
+
+	// Try exact date match: today local, today UTC, and yesterday (both).
+	// GitHub uses the user's *profile* timezone which may differ from the
+	// machine, so we cast a wide net.
+	now := time.Now()
+	todayLocal := now.Format("2006-01-02")
+	todayUTC := now.UTC().Format("2006-01-02")
+	yesterdayLocal := now.AddDate(0, 0, -1).Format("2006-01-02")
+	yesterdayUTC := now.UTC().AddDate(0, 0, -1).Format("2006-01-02")
+
+	// Scan from the end (most recent first).
+	for i := len(allDays) - 1; i >= 0; i-- {
+		d := allDays[i]
+		if d.Date == todayLocal || d.Date == todayUTC {
+			return d.ContributionCount
 		}
 	}
 
-	// Fallback to the latest day in grid
-	if !found {
-		weeks := res.Data.User.ContributionsCollection.ContributionCalendar.Weeks
-		if len(weeks) > 0 {
-			days := weeks[len(weeks)-1].ContributionDays
-			if len(days) > 0 {
-				contributions = days[len(days)-1].ContributionCount
-			}
+	// Fallback: if today hasn't appeared in the calendar yet (GitHub
+	// processing delay), check yesterday's count as a secondary fallback.
+	for i := len(allDays) - 1; i >= 0; i-- {
+		d := allDays[i]
+		if d.Date == yesterdayLocal || d.Date == yesterdayUTC {
+			return d.ContributionCount
 		}
 	}
 
-	commits := a.getGitHubCommitsToday(username, token)
-
-	return GitHubStats{Username: username, Contributions: contributions, Commits: commits}
+	// Final fallback: return the last calendar day's count.
+	return allDays[len(allDays)-1].ContributionCount
 }
 
-// getGitHubCommitsToday counts actual commits pushed today via the REST Events
-// API. It filters PushEvents by today's date (checking created_at) and sums
-// payload.size (the number of commits in each push).
+// getGitHubCommitsToday counts actual commits pushed today across all of the
+// user's repos. It uses the REST API:
+//  1. GET /user/repos?sort=pushed — list recently pushed repos
+//  2. For each repo pushed after the start of today (local TZ → UTC):
+//     GET /repos/{owner}/{repo}/commits?since={sinceUTC}
+//
+// This bypasses the contribution calendar's processing delay and includes
+// private repos (token has `repo` scope).
 func (a *App) getGitHubCommitsToday(username, token string) int {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	// Calculate the start of "today" in the user's local timezone, then
+	// convert to UTC for the `since` parameter.
+	now := time.Now()
+	startOfTodayLocal := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
+	sinceUTC := startOfTodayLocal.UTC().Format(time.RFC3339)
+
+	fmt.Printf("[GITHUB] commits: since=%s (local TZ %s)\n", sinceUTC, now.Location())
+
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
+	// 1. List repos sorted by most recently pushed (owner affiliation only).
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet,
-		fmt.Sprintf("https://api.github.com/users/%s/events/public?per_page=100", username), nil)
+		"https://api.github.com/user/repos?sort=pushed&per_page=20&affiliation=owner", nil)
 	if err != nil {
 		return 0
 	}
-	if token != "" {
-		req.Header.Set("Authorization", "Bearer "+token)
-	}
+	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("Accept", "application/json")
 	req.Header.Set("User-Agent", "Glance-Widget/1.0")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
+		fmt.Printf("[GITHUB] repos list error: %v\n", err)
 		return 0
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
+		fmt.Printf("[GITHUB] repos list HTTP %d\n", resp.StatusCode)
 		return 0
 	}
 
-	var events []struct {
-		Type      string `json:"type"`
-		CreatedAt string `json:"created_at"`
-		Payload   struct {
-			Size int `json:"size"`
-		} `json:"payload"`
+	var repos []struct {
+		FullName string `json:"full_name"`
+		PushedAt string `json:"pushed_at"`
 	}
-	if err := json.NewDecoder(resp.Body).Decode(&events); err != nil {
+	if err := json.NewDecoder(resp.Body).Decode(&repos); err != nil {
+		fmt.Printf("[GITHUB] repos decode error: %v\n", err)
 		return 0
 	}
 
-	todayLocal := time.Now().Format("2006-01-02")
-	todayUTC := time.Now().UTC().Format("2006-01-02")
-	commits := 0
-	for _, e := range events {
-		if e.Type != "PushEvent" {
+	// Filter: only check repos that were pushed after the start of today.
+	sinceTime, _ := time.Parse(time.RFC3339, sinceUTC)
+	var candidates []string
+	for _, r := range repos {
+		if r.PushedAt == "" {
 			continue
 		}
-		// GitHub event timestamps are ISO-8601 UTC (e.g. "2026-07-01T12:34:56Z").
-		// Extract the date portion and compare against both local and UTC today.
-		if len(e.CreatedAt) < 10 {
+		pushTime, err := time.Parse(time.RFC3339, r.PushedAt)
+		if err != nil {
 			continue
 		}
-		eventDate := e.CreatedAt[:10]
-		if eventDate == todayLocal || eventDate == todayUTC {
-			commits += e.Payload.Size
+		if pushTime.After(sinceTime) || pushTime.Equal(sinceTime) {
+			candidates = append(candidates, r.FullName)
 		}
 	}
-	return commits
+
+	fmt.Printf("[GITHUB] repos pushed today: %d (%v)\n", len(candidates), candidates)
+
+	if len(candidates) == 0 {
+		return 0
+	}
+
+	// 2. For each candidate repo, count commits since start-of-today.
+	totalCommits := 0
+	for _, repo := range candidates {
+		count, err := a.countRepoCommits(ctx, token, repo, sinceUTC)
+		if err != nil {
+			fmt.Printf("[GITHUB] commits fetch error for %s: %v\n", repo, err)
+			continue
+		}
+		fmt.Printf("[GITHUB]   %s: %d commits\n", repo, count)
+		totalCommits += count
+	}
+
+	return totalCommits
+}
+
+// countRepoCommits fetches commits for a single repo since the given UTC
+// timestamp and returns the count.
+func (a *App) countRepoCommits(ctx context.Context, token, repoName, sinceUTC string) (int, error) {
+	url := fmt.Sprintf("https://api.github.com/repos/%s/commits?since=%s&per_page=100", repoName, sinceUTC)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return 0, err
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("User-Agent", "Glance-Widget/1.0")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return 0, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return 0, fmt.Errorf("HTTP %d", resp.StatusCode)
+	}
+
+	var commits []struct {
+		SHA string `json:"sha"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&commits); err != nil {
+		return 0, err
+	}
+	return len(commits), nil
 }
 
 func (a *App) getGitHubStatsScraper(username string) GitHubStats {
@@ -666,24 +794,31 @@ func (a *App) getGitHubStatsScraper(username string) GitHubStats {
 		return GitHubStats{Username: username, Error: err.Error()}
 	}
 
-	today := time.Now().UTC().Format("2006-01-02")
-	re1 := regexp.MustCompile(`data-date="` + regexp.QuoteMeta(today) + `"[^>]*data-count="(\d+)"`)
+	todayLocal := time.Now().Format("2006-01-02")
+	todayUTC := time.Now().UTC().Format("2006-01-02")
+	commits := a.getGitHubCommitsToday(username, "")
+	re1 := regexp.MustCompile(`data-date="` + regexp.QuoteMeta(todayLocal) + `"[^>]*data-count="(\d+)"`)
 	if m := re1.FindSubmatch(body); m != nil {
 		count, _ := strconv.Atoi(string(m[1]))
-		return GitHubStats{Username: username, Contributions: count, Commits: a.getGitHubCommitsToday(username, "")}
+		return GitHubStats{Username: username, Contributions: count, Commits: commits}
 	}
-	re2 := regexp.MustCompile(`data-count="(\d+)"[^>]*data-date="` + regexp.QuoteMeta(today) + `"`)
+	re2 := regexp.MustCompile(`data-date="` + regexp.QuoteMeta(todayUTC) + `"[^>]*data-count="(\d+)"`)
 	if m := re2.FindSubmatch(body); m != nil {
 		count, _ := strconv.Atoi(string(m[1]))
-		return GitHubStats{Username: username, Contributions: count, Commits: a.getGitHubCommitsToday(username, "")}
+		return GitHubStats{Username: username, Contributions: count, Commits: commits}
 	}
-	todayFormatted := time.Now().UTC().Format("January 2, 2006")
-	re3 := regexp.MustCompile(`aria-label="(\d+) contributions? on ` + regexp.QuoteMeta(todayFormatted) + `"`)
+	re3 := regexp.MustCompile(`data-count="(\d+)"[^>]*data-date="(?:` + regexp.QuoteMeta(todayLocal) + `|` + regexp.QuoteMeta(todayUTC) + `)"`)
 	if m := re3.FindSubmatch(body); m != nil {
 		count, _ := strconv.Atoi(string(m[1]))
-		return GitHubStats{Username: username, Contributions: count, Commits: a.getGitHubCommitsToday(username, "")}
+		return GitHubStats{Username: username, Contributions: count, Commits: commits}
 	}
-	return GitHubStats{Username: username, Contributions: 0, Commits: a.getGitHubCommitsToday(username, "")}
+	todayFormatted := time.Now().Format("January 2, 2006")
+	re4 := regexp.MustCompile(`aria-label="(\d+) contributions? on ` + regexp.QuoteMeta(todayFormatted) + `"`)
+	if m := re4.FindSubmatch(body); m != nil {
+		count, _ := strconv.Atoi(string(m[1]))
+		return GitHubStats{Username: username, Contributions: count, Commits: commits}
+	}
+	return GitHubStats{Username: username, Contributions: 0, Commits: commits}
 }
 
 // GetDockerStats returns running/stopped container counts from the local Docker daemon.
