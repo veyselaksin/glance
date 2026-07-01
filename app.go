@@ -36,6 +36,7 @@ type Config struct {
 	ClientSecret   string         `json:"client_secret"`
 	ServerHost     string         `json:"server_host"`
 	Servers        []ServerConfig `json:"servers"`
+	DockerSocket   string         `json:"docker_socket"`
 }
 
 // ServerConfig describes a saved SSH-reachable VPS or server.
@@ -86,9 +87,7 @@ type ServerStatus struct {
 	Error   string  `json:"error,omitempty"`
 }
 
-// WidgetData is the root document written to widget_data.json
-// and consumed by the native Swift WidgetKit extension.
-type WidgetData struct {
+type AppData struct {
 	UpdatedAt string       `json:"updated_at"`
 	GitHub    GitHubStats  `json:"github"`
 	Docker    DockerStats  `json:"docker"`
@@ -102,7 +101,7 @@ type App struct {
 	ctx      context.Context
 	mu       sync.RWMutex
 	cfg      Config
-	last     WidgetData
+	last     AppData
 	sshMu    sync.Mutex
 	sessions map[string]*sshSession
 }
@@ -115,7 +114,6 @@ func NewApp() *App {
 // startup is called by Wails when the app starts.
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
-	registerWidgetHostApp()
 	a.cfg = a.loadConfig()
 	// Ensure the SSH key storage directory exists at ~/.glance/ssh_keys/
 	if _, err := sshKeyDir(); err != nil {
@@ -168,7 +166,7 @@ func (a *App) refresh() {
 		runtime.EventsEmit(a.ctx, "agent_log", map[string]string{"tag": "NET", "msg": fmt.Sprintf("Pinged server: %s (%.1f ms)", sv.Host, sv.Latency)})
 	}
 
-	data := WidgetData{
+	data := AppData{
 		UpdatedAt: time.Now().UTC().Format(time.RFC3339),
 		GitHub:    gh,
 		Docker:    dk,
@@ -179,20 +177,19 @@ func (a *App) refresh() {
 	a.last = data
 	a.mu.Unlock()
 
-	_ = a.writeWidgetData(data)
-	runtime.EventsEmit(a.ctx, "agent_log", map[string]string{"tag": "SYS", "msg": "Metrics written to widget_data.json"})
+	runtime.EventsEmit(a.ctx, "agent_log", map[string]string{"tag": "SYS", "msg": "Metrics refreshed"})
 	runtime.EventsEmit(a.ctx, "data_updated", data)
 }
 
 // ─── Data directory & persistence ─────────────────────────────────────────────
 
-// dataDir returns (and creates) ~/Library/Application Support/Glance.
+// dataDir returns (and creates) the local data directory at ~/.glance/.
 func (a *App) dataDir() (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", err
 	}
-	dir := filepath.Join(home, "Library", "Application Support", "Glance")
+	dir := filepath.Join(home, ".glance")
 	return dir, os.MkdirAll(dir, 0o755)
 }
 
@@ -252,27 +249,10 @@ func (a *App) GetConfig() Config {
 }
 
 // GetLastData returns the most recently fetched snapshot to the frontend.
-func (a *App) GetLastData() WidgetData {
+func (a *App) GetLastData() AppData {
 	a.mu.RLock()
 	defer a.mu.RUnlock()
 	return a.last
-}
-
-// writeWidgetData atomically writes data to widget_data.json via temp-rename.
-func (a *App) writeWidgetData(data WidgetData) error {
-	dir, err := a.dataDir()
-	if err != nil {
-		return err
-	}
-	b, err := json.MarshalIndent(data, "", "  ")
-	if err != nil {
-		return err
-	}
-	tmp := filepath.Join(dir, "widget_data.tmp")
-	if err := os.WriteFile(tmp, b, 0o644); err != nil {
-		return err
-	}
-	return os.Rename(tmp, filepath.Join(dir, "widget_data.json"))
 }
 
 // StartOAuthFlow starts a local server on port 57321, opens the browser to sign in,
@@ -413,7 +393,7 @@ func (a *App) exchangeCodeForToken(clientID, clientSecret, code string) (string,
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", "Glance-Widget/1.0")
+	req.Header.Set("User-Agent", "Glance/1.0")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -446,7 +426,7 @@ func (a *App) fetchGitHubUsername(token string) (string, error) {
 	}
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", "Glance-Widget/1.0")
+	req.Header.Set("User-Agent", "Glance/1.0")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -556,7 +536,7 @@ func (a *App) getContributionsToday(username, token string) int {
 	}
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("User-Agent", "Glance-Widget/1.0")
+	req.Header.Set("User-Agent", "Glance/1.0")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -680,7 +660,7 @@ func (a *App) getGitHubCommitsToday(username, token string) int {
 	}
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", "Glance-Widget/1.0")
+	req.Header.Set("User-Agent", "Glance/1.0")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -749,7 +729,7 @@ func (a *App) countRepoCommits(ctx context.Context, token, repoName, sinceUTC st
 	}
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", "Glance-Widget/1.0")
+	req.Header.Set("User-Agent", "Glance/1.0")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -778,7 +758,7 @@ func (a *App) getGitHubStatsScraper(username string) GitHubStats {
 	if err != nil {
 		return GitHubStats{Username: username, Error: err.Error()}
 	}
-	req.Header.Set("User-Agent", "Glance-Widget/1.0")
+	req.Header.Set("User-Agent", "Glance/1.0")
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -826,7 +806,11 @@ func (a *App) GetDockerStats() DockerStats {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
+	a.mu.RLock()
+	socketPath := a.cfg.DockerSocket
+	a.mu.RUnlock()
+
+	cli, err := dockerClient(socketPath)
 	if err != nil {
 		return DockerStats{Error: err.Error()}
 	}
@@ -854,11 +838,15 @@ func (a *App) GetDockerStats() DockerStats {
 	return DockerStats{Running: running, Stopped: stopped, Total: len(containers), Version: version}
 }
 
-// dockerClient returns a Docker SDK client connected to the local unix socket
-// at /var/run/docker.sock with API-version negotiation enabled.
-func dockerClient() (*client.Client, error) {
+// dockerClient returns a Docker SDK client connected to the configured unix
+// socket with API-version negotiation enabled. Falls back to /var/run/docker.sock
+// when socketPath is empty.
+func dockerClient(socketPath string) (*client.Client, error) {
+	if socketPath == "" {
+		socketPath = "/var/run/docker.sock"
+	}
 	return client.NewClientWithOpts(
-		client.WithHost("unix:///var/run/docker.sock"),
+		client.WithHost("unix://"+socketPath),
 		client.WithAPIVersionNegotiation(),
 	)
 }
@@ -889,7 +877,11 @@ func (a *App) GetContainers() ([]ContainerInfo, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	cli, err := dockerClient()
+	a.mu.RLock()
+	socketPath := a.cfg.DockerSocket
+	a.mu.RUnlock()
+
+	cli, err := dockerClient(socketPath)
 	if err != nil {
 		return nil, err
 	}
@@ -952,7 +944,11 @@ func (a *App) StreamContainerLogs(containerID string, lines int) (string, error)
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	cli, err := dockerClient()
+	a.mu.RLock()
+	socketPath := a.cfg.DockerSocket
+	a.mu.RUnlock()
+
+	cli, err := dockerClient(socketPath)
 	if err != nil {
 		return "", err
 	}
@@ -990,7 +986,11 @@ func (a *App) StopContainer(id string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	cli, err := dockerClient()
+	a.mu.RLock()
+	socketPath := a.cfg.DockerSocket
+	a.mu.RUnlock()
+
+	cli, err := dockerClient(socketPath)
 	if err != nil {
 		return err
 	}
@@ -1005,7 +1005,11 @@ func (a *App) StartContainer(id string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	cli, err := dockerClient()
+	a.mu.RLock()
+	socketPath := a.cfg.DockerSocket
+	a.mu.RUnlock()
+
+	cli, err := dockerClient(socketPath)
 	if err != nil {
 		return err
 	}
@@ -1021,7 +1025,11 @@ func (a *App) DeleteContainer(id string) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 
-	cli, err := dockerClient()
+	a.mu.RLock()
+	socketPath := a.cfg.DockerSocket
+	a.mu.RUnlock()
+
+	cli, err := dockerClient(socketPath)
 	if err != nil {
 		return err
 	}
@@ -1116,7 +1124,7 @@ func (a *App) httpPing(ipOrDomain string) (bool, float64, error) {
 	if err != nil {
 		return false, 0, err
 	}
-	req.Header.Set("User-Agent", "Glance-Widget/1.0")
+	req.Header.Set("User-Agent", "Glance/1.0")
 
 	client := &http.Client{
 		Timeout: 3 * time.Second,
@@ -1133,7 +1141,7 @@ func (a *App) httpPing(ipOrDomain string) (bool, float64, error) {
 			start = time.Now()
 			req2, err2 := http.NewRequestWithContext(ctx, http.MethodGet, parsedURL.String(), nil)
 			if err2 == nil {
-				req2.Header.Set("User-Agent", "Glance-Widget/1.0")
+				req2.Header.Set("User-Agent", "Glance/1.0")
 				resp2, err3 := client.Do(req2)
 				latency = float64(time.Since(start).Microseconds()) / 1000.0
 				if err3 == nil {

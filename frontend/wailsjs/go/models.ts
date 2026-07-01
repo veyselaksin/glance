@@ -33,11 +33,12 @@ export namespace main {
 	    client_secret: string;
 	    server_host: string;
 	    servers: ServerConfig[];
-	
+	    docker_socket: string;
+
 	    static createFrom(source: any = {}) {
 	        return new Config(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.github_username = source["github_username"];
@@ -46,6 +47,7 @@ export namespace main {
 	        this.client_secret = source["client_secret"];
 	        this.server_host = source["server_host"];
 	        this.servers = this.convertValues(source["servers"], ServerConfig);
+	        this.docker_socket = source["docker_socket"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -173,14 +175,14 @@ export namespace main {
 	        this.error = source["error"];
 	    }
 	}
-	export class WidgetData {
+	export class AppData {
 	    updated_at: string;
 	    github: GitHubStats;
 	    docker: DockerStats;
 	    server: ServerStatus;
 	
 	    static createFrom(source: any = {}) {
-	        return new WidgetData(source);
+	        return new AppData(source);
 	    }
 	
 	    constructor(source: any = {}) {

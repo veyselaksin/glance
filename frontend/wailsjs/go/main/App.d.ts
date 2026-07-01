@@ -18,7 +18,7 @@ export function GetDockerStats():Promise<main.DockerStats>;
 
 export function GetGitHubStats(arg1:string):Promise<main.GitHubStats>;
 
-export function GetLastData():Promise<main.WidgetData>;
+export function GetLastData():Promise<main.AppData>;
 
 export function GetServerMetrics(arg1:string):Promise<main.ServerMetrics>;
 

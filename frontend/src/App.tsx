@@ -25,9 +25,10 @@ interface Config {
   client_secret: string;
   server_host: string;
   servers: ServerConfig[];
+  docker_socket: string;
 }
 
-interface WidgetData {
+interface AppData {
   updated_at: string;
   github: { username: string; contributions: number; commits: number; error?: string };
   docker: { running: number; stopped: number; total: number; version?: string; error?: string };
@@ -315,7 +316,7 @@ function Dashboard({
   onClearLogs,
 }: {
   cfg: Config;
-  data: WidgetData | null;
+  data: AppData | null;
   onUpdate: (field: string, val: string) => void;
   onSave: () => void;
   saving: boolean;
@@ -514,7 +515,15 @@ function Dashboard({
                   <div className="space-y-md">
                     <div className="space-y-sm">
                       <label className="block text-label-caps font-label-caps text-on-surface-variant">Unix Socket Path</label>
-                      <input className="mac-input" type="text" value="/var/run/docker.sock" readOnly />
+                      <input
+                        className="mac-input"
+                        type="text"
+                        value={cfg.docker_socket || '/var/run/docker.sock'}
+                        onChange={e => onUpdate('docker_socket', e.target.value)}
+                        placeholder="/var/run/docker.sock"
+                        spellCheck={false}
+                        autoComplete="off"
+                      />
                     </div>
                     <div className="flex items-center justify-between text-body-sm pt-2">
                       <span className="text-on-surface-variant">Status</span>
@@ -712,7 +721,15 @@ function Dashboard({
                 <div className="space-y-md">
                   <div className="space-y-sm">
                     <label className="block text-label-caps font-label-caps text-on-surface-variant">Unix Socket Path</label>
-                    <input className="mac-input" type="text" value="/var/run/docker.sock" readOnly />
+                    <input
+                      className="mac-input"
+                      type="text"
+                      value={cfg.docker_socket || '/var/run/docker.sock'}
+                      onChange={e => onUpdate('docker_socket', e.target.value)}
+                      placeholder="/var/run/docker.sock"
+                      spellCheck={false}
+                      autoComplete="off"
+                    />
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-md pt-2">
@@ -811,7 +828,7 @@ function Dashboard({
                 <div>
                   <h4 className="text-headline-sm font-headline-sm text-on-surface mb-sm">Architecture Overview</h4>
                   <p className="text-body-md font-body-md text-on-surface-variant leading-relaxed">
-                    Glance is a hybrid macOS desktop application combining a Go + Wails agent binary with a native Swift WidgetKit extension. The Go agent runs a background ticker every 30 seconds, fetching GitHub contributions, Docker container stats, and server latency data, then writing the results atomically to a local JSON file.
+                    Glance is a macOS desktop application built with Go + Wails. The Go agent runs a background ticker every 30 seconds, fetching GitHub contributions, Docker container stats, and server latency data.
                   </p>
                 </div>
 
@@ -822,7 +839,6 @@ function Dashboard({
                       { icon: 'account_tree', label: 'GitHub GraphQL API', desc: 'Fetches today\'s contribution count using OAuth token.' },
                       { icon: 'terminal',     label: 'Docker Socket',      desc: 'Reads /var/run/docker.sock for container stats.' },
                       { icon: 'dns',          label: 'ICMP/HTTP Ping',     desc: 'Pings configured server host for latency tracking.' },
-                      { icon: 'folder',       label: 'Widget Data File',   desc: '~/Library/Application Support/Glance/widget_data.json' },
                     ].map(item => (
                       <div key={item.label} className="flex items-start gap-sm p-sm bg-background border border-outline rounded">
                         <span className="material-symbols-outlined text-primary shrink-0" style={{ fontSize: 18 }}>{item.icon}</span>
@@ -833,13 +849,6 @@ function Dashboard({
                       </div>
                     ))}
                   </div>
-                </div>
-
-                <div className="border-t border-outline pt-md">
-                  <h4 className="text-headline-sm font-headline-sm text-on-surface mb-sm">WidgetKit Integration</h4>
-                  <p className="text-body-sm font-body-sm text-on-surface-variant leading-relaxed">
-                    The native Swift widget reads <code className="text-primary font-mono text-[11px]">widget_data.json</code> from the app's shared container. Ensure <code className="text-primary font-mono text-[11px]">com.apple.security.app-sandbox</code> is set to <code className="text-primary font-mono text-[11px]">false</code> in the widget's entitlements for file access.
-                  </p>
                 </div>
               </div>
             </div>
@@ -923,8 +932,9 @@ export default function App() {
     client_secret: '',
     server_host: '',
     servers: [],
+    docker_socket: '/var/run/docker.sock',
   });
-  const [data, setData]           = useState<WidgetData | null>(null);
+  const [data, setData]           = useState<AppData | null>(null);
   const [saving, setSaving]       = useState(false);
   const [dirty, setDirty]         = useState(false);
   const [flash, setFlash]         = useState<'saved' | 'error' | null>(null);
@@ -974,7 +984,7 @@ export default function App() {
       pushLog(payload.tag || 'SYS', payload.msg || '');
     });
 
-    const offData = EventsOn('data_updated', (d: WidgetData) => {
+    const offData = EventsOn('data_updated', (d: AppData) => {
       if (d?.updated_at) setData(d);
     });
 

@@ -32,26 +32,10 @@ yarn-error.log*
 .env.development.local
 .env.production.local
 
-# === Xcode & Swift (Native Widget) ===
-build/
-DerivedData/
-*.xcuserstate
-*.xcworkspace/
-.navigation/
-
-# XcodeGen ile projeyi otomatik ürettiğimiz için kişisel Xcode arayüz loglarını uçuruyoruz
-# Ama ana proje yapısını korumak istersen diye pbxproj açık kalıyor
-*.xcodeproj/xcuserdata/
-*.xcodeproj/project.xcworkspace/
-
-# === Shared Local App Data (Local Bridge) ===
-# Go backend'in widget için yerelde üreteceği config ve json verilerini git'e göndermiyoruz
-widget_data.json
-config.json
-*.local.json
-
 # === IDEs (Cursor / VSCode / GoLand) ===
 .idea/
 .vscode/
 *.swp
 *.swo
+.opencode/
+.build/
