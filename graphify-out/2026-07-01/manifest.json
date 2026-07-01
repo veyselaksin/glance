@@ -124,6 +124,26 @@
     "ast_hash": "60a04b1caf1b82920331095babaa509f",
     "semantic_hash": "60a04b1caf1b82920331095babaa509f"
   },
+  "design/glance_dashboard_macos_blue/code.html": {
+    "mtime": 1782652010.0142024,
+    "ast_hash": "95fd9d945ddbeebbd8eca96edd55c015",
+    "semantic_hash": "95fd9d945ddbeebbd8eca96edd55c015"
+  },
+  "design/glance_medium_widget_macos_blue/code.html": {
+    "mtime": 1782652010.025089,
+    "ast_hash": "5bf6dbfb784d1be55d7cfd808c63b344",
+    "semantic_hash": "5bf6dbfb784d1be55d7cfd808c63b344"
+  },
+  "design/glance_sign_in_macos_blue/code.html": {
+    "mtime": 1782652010.0480473,
+    "ast_hash": "94292f8275de28febe4acc5f03097fe3",
+    "semantic_hash": "94292f8275de28febe4acc5f03097fe3"
+  },
+  "design/glance_small_widget_macos_blue/code.html": {
+    "mtime": 1782652010.0512767,
+    "ast_hash": "a581e40099682bf4def91270c1432ff9",
+    "semantic_hash": "a581e40099682bf4def91270c1432ff9"
+  },
   "frontend/index.html": {
     "mtime": 1781299516.1887136,
     "ast_hash": "da2bb7bc9e2bbfed4c7cc57e79ddcf87",

@@ -1,18 +1,12 @@
-# Graph Report - glance  (2026-07-01)
+# Graph Report - .  (2026-07-01)
 
 ## Corpus Check
-- 22 files · ~16,814 words
-- Verdict: corpus is large enough that graph structure adds value.
+- Corpus is ~20,510 words - fits in a single context window. You may not need a graph.
 
 ## Summary
-- 324 nodes · 391 edges · 25 communities (18 shown, 7 thin omitted)
-- Extraction: 99% EXTRACTED · 1% INFERRED · 0% AMBIGUOUS · INFERRED: 5 edges (avg confidence: 0.56)
+- 344 nodes · 430 edges · 26 communities (21 shown, 5 thin omitted)
+- Extraction: 95% EXTRACTED · 5% INFERRED · 0% AMBIGUOUS · INFERRED: 20 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
-
-## Graph Freshness
-- Built from commit: `35000767`
-- Run `git rev-parse HEAD` and compare to check if the graph is stale.
-- Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
 - [[_COMMUNITY_Frontend App Components|Frontend App Components]]
@@ -33,6 +27,7 @@
 - [[_COMMUNITY_OpenCode Plugin Core|OpenCode Plugin Core]]
 - [[_COMMUNITY_OpenCode Package Config|OpenCode Package Config]]
 - [[_COMMUNITY_Medium Widget Design|Medium Widget Design]]
+- [[_COMMUNITY_Small Widget Design|Small Widget Design]]
 - [[_COMMUNITY_Dev Stats Widget|Dev Stats Widget]]
 
 ## God Nodes (most connected - your core abstractions)
@@ -40,16 +35,24 @@
 2. `compilerOptions` - 16 edges
 3. `App` - 11 edges
 4. `dockerClient()` - 8 edges
-5. `Config` - 7 edges
-6. `AppData` - 6 edges
-7. `compilerOptions` - 5 edges
-8. `sshSession` - 5 edges
-9. `sshClientFor()` - 5 edges
-10. `GitHubStats` - 4 edges
+5. `Dashboard` - 8 edges
+6. `Config` - 7 edges
+7. `AppData` - 6 edges
+8. `sshSession` - 6 edges
+9. `ServersView()` - 5 edges
+10. `compilerOptions` - 5 edges
 
 ## Surprising Connections (you probably didn't know these)
+- `Main TSX Entry Point` --references--> `Dashboard`  [INFERRED]
+  frontend/index.html → design/glance_dashboard_macos_blue/code.html
+- `App` --references--> `sshSession`  [EXTRACTED]
+  app.go → ssh.go
 - `main()` --calls--> `NewApp()`  [INFERRED]
   main.go → app.go
+- `Glass Panel Effect` --semantically_similar_to--> `Apple Glass Effect (Widget)`  [INFERRED] [semantically similar]
+  design/glance_dashboard_macos_blue/code.html → design/glance_medium_widget_macos_blue/code.html
+- `Glass Panel Effect` --semantically_similar_to--> `Glass Panel Effect (Sign In)`  [INFERRED] [semantically similar]
+  design/glance_dashboard_macos_blue/code.html → design/glance_sign_in_macos_blue/code.html
 
 ## Import Cycles
 - None detected.
@@ -59,15 +62,15 @@
 - **GitHub Integration Pattern** — design_glance_dashboard_macos_blue_code_github_settings_card, design_glance_medium_widget_macos_blue_code_github_contribution_grid, design_glance_small_widget_macos_blue_code_contribution_grid, design_glance_sign_in_macos_blue_code_github_oauth_button [INFERRED 0.85]
 - **Infrastructure Monitoring Pattern** — design_glance_dashboard_macos_blue_code_docker_daemon_card, design_glance_dashboard_macos_blue_code_remote_servers_card, design_glance_dashboard_macos_blue_code_status_console, design_glance_medium_widget_macos_blue_code_docker_container_stats, design_glance_medium_widget_macos_blue_code_vps_latency [INFERRED 0.85]
 
-## Communities (25 total, 7 thin omitted)
+## Communities (26 total, 5 thin omitted)
 
 ### Community 1 - "Frontend App Components"
-Cohesion: 0.08
-Nodes (17): formatBytes(), formatUptime(), pct(), PingResult, ServerConfig, ServerMetrics, ServersView(), ConnectSSH() (+9 more)
+Cohesion: 0.06
+Nodes (35): AppData, Config, ContainerInfo, LogLine, ServerConfig, TabId, container, root (+27 more)
 
 ### Community 2 - "Go Backend Core"
 Cohesion: 0.09
-Nodes (19): cpuPercent(), dockerClient(), NewApp(), Client, Context, CPUStats, App, AppData (+11 more)
+Nodes (18): cpuPercent(), dockerClient(), Client, App, ServerConfig, NewApp(), Context, CPUStats (+10 more)
 
 ### Community 3 - "Wails Go Model Bindings"
 Cohesion: 0.09
@@ -89,6 +92,10 @@ Nodes (18): compilerOptions, allowJs, allowSyntheticDefaultImports, esModuleInte
 Cohesion: 0.12
 Nodes (15): author, bugs, url, description, homepage, keywords, license, main (+7 more)
 
+### Community 8 - "UI Design Components"
+Cohesion: 0.15
+Nodes (15): Dashboard, Docker Daemon Card, GitHub Settings Card, Sign in with GitHub Button, Remote Servers Card, Sidebar Navigation, Floating Status Console, Widget Docker Container Stats (+7 more)
+
 ### Community 9 - "Wails Project Config"
 Cohesion: 0.18
 Nodes (10): author, email, name, frontend:build, frontend:dev:serverUrl, frontend:dev:watcher, frontend:install, name (+2 more)
@@ -101,33 +108,41 @@ Nodes (7): EnvironmentInfo, NotificationAction, NotificationCategory, Notificati
 Cohesion: 0.29
 Nodes (6): compilerOptions, allowSyntheticDefaultImports, composite, module, moduleResolution, include
 
+### Community 12 - "Sign-In Page"
+Cohesion: 0.40
+Nodes (3): Config, SignInPage(), BrowserOpenURL()
+
 ### Community 13 - "Design Tokens"
-Cohesion: 0.12
-Nodes (8): AppData, Config, ContainerInfo, LogLine, ServerConfig, TabId, container, root
+Cohesion: 0.50
+Nodes (4): Dashboard Design Tokens, Medium Widget Design Tokens, Sign In Design Tokens, Small Widget Design Tokens
+
+### Community 14 - "Glass Panel Styling"
+Cohesion: 0.50
+Nodes (4): Glass Panel Effect, Apple Glass Effect (Widget), Glass Panel Effect (Sign In), Glass Panel Effect (Small Widget)
 
 ### Community 15 - "Event Listener API"
 Cohesion: 0.67
 Nodes (3): EventsOn(), EventsOnce(), EventsOnMultiple()
 
 ## Knowledge Gaps
-- **89 isolated node(s):** `ServerConfig`, `ServerConfig`, `Config`, `AppData`, `ContainerInfo` (+84 more)
+- **101 isolated node(s):** `$schema`, `plugin`, `@opencode-ai/plugin`, `ServerConfig`, `name` (+96 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **7 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **5 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **What connects `ServerConfig`, `ServerConfig`, `Config` to the rest of the system?**
-  _89 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Why does `App` connect `Go Backend Core` to `Server & SSH Management`?**
+  _High betweenness centrality (0.031) - this node is a cross-community bridge._
+- **Why does `sshSession` connect `Server & SSH Management` to `Go Backend Core`?**
+  _High betweenness centrality (0.013) - this node is a cross-community bridge._
+- **Why does `sshKeyDir()` connect `Server & SSH Management` to `Go Backend Core`?**
+  _High betweenness centrality (0.006) - this node is a cross-community bridge._
+- **What connects `$schema`, `plugin`, `@opencode-ai/plugin` to the rest of the system?**
+  _101 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Wails JS Runtime API` be split into smaller, more focused modules?**
   _Cohesion score 0.03125 - nodes in this community are weakly interconnected._
 - **Should `Frontend App Components` be split into smaller, more focused modules?**
-  _Cohesion score 0.08199643493761141 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.060408163265306125 - nodes in this community are weakly interconnected._
 - **Should `Go Backend Core` be split into smaller, more focused modules?**
-  _Cohesion score 0.0851063829787234 - nodes in this community are weakly interconnected._
-- **Should `Wails Go Model Bindings` be split into smaller, more focused modules?**
-  _Cohesion score 0.0873015873015873 - nodes in this community are weakly interconnected._
-- **Should `Server & SSH Management` be split into smaller, more focused modules?**
-  _Cohesion score 0.13666666666666666 - nodes in this community are weakly interconnected._
-- **Should `Frontend Dependencies` be split into smaller, more focused modules?**
-  _Cohesion score 0.08695652173913043 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.08788159111933395 - nodes in this community are weakly interconnected._

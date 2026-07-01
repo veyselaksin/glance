@@ -1,1 +1,27 @@
-{"0": "Wails JS Runtime API", "1": "Frontend App Components", "2": "Go Backend Core", "3": "Wails Go Model Bindings", "4": "Server & SSH Management", "5": "Frontend Dependencies", "6": "TypeScript Config", "7": "Wails Runtime Package", "8": "UI Design Components", "9": "Wails Project Config", "10": "Runtime Type Definitions", "11": "Node TS Config", "12": "Sign-In Page", "13": "Design Tokens", "14": "Glass Panel Styling", "15": "Event Listener API", "16": "OpenCode Plugin Core", "17": "OpenCode Package Config", "18": "Graphify Plugin", "19": "Medium Widget Design", "20": "Small Widget Design", "21": "PostCSS Config", "22": "Vite Env Types", "23": "Tailwind Config", "24": "Vite Config", "25": "Dev Stats Widget"}
+{
+  "0": "Wails JS Runtime API",
+  "1": "Frontend App Components",
+  "2": "Go Backend Core",
+  "3": "Wails Go Model Bindings",
+  "4": "Server & SSH Management",
+  "5": "Frontend Dependencies",
+  "6": "TypeScript Config",
+  "7": "Wails Runtime Package",
+  "8": "UI Design Components",
+  "9": "Wails Project Config",
+  "10": "Runtime Type Definitions",
+  "11": "Node TS Config",
+  "12": "Sign-In Page",
+  "13": "Design Tokens",
+  "14": "Glass Panel Styling",
+  "15": "Event Listener API",
+  "16": "OpenCode Plugin Core",
+  "17": "OpenCode Package Config",
+  "18": "Graphify Plugin",
+  "19": "Medium Widget Design",
+  "21": "PostCSS Config",
+  "22": "Vite Env Types",
+  "23": "Tailwind Config",
+  "24": "Vite Config",
+  "25": "Dev Stats Widget"
+}
