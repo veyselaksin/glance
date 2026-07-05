@@ -25,6 +25,23 @@ vibrancy, and a dark, material-inspired UI.
 - **Server ping** — ICMP and HTTP health checks for any host.
 - **Docs** — built-in reference for the bundled commands and conventions.
 
+## 🚀 Installation
+
+You can easily install Glance on macOS using **Homebrew**. Thanks to our automated custom Tap, you don't need to worry about manual downloads or macOS Gatekeeper permission prompts.
+
+Run the following commands in your terminal:
+
+```bash
+# 1. Add the custom Homebrew tap
+brew tap veyselaksin/tap
+
+# 2. Trust the tap (Required for custom third-party taps)
+brew trust veyselaksin/tap
+
+# 3. Install Glance as a macOS Cask
+brew install --cask glance
+```
+
 ## Requirements
 
 - macOS 12 or newer (the UI is tuned for Mac; Linux/Windows builds are
