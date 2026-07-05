@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -42,8 +43,21 @@ import (
 // override it per-user via the "Advanced" section in GitHub Settings.
 const DefaultClientID = "Iv23liUdlgD2PfwfmoAO"
 
-// AppVersion is the application version, mirrored from wails.json.
-const AppVersion = "1.0.1"
+//go:embed wails.json
+var wailsConfigData []byte
+
+// AppVersion is the application version, sourced automatically from wails.json
+// at build time. Change the "version" field in wails.json and rebuild — no need
+// to touch this file.
+var AppVersion = func() string {
+	var cfg struct {
+		Version string `json:"version"`
+	}
+	if err := json.Unmarshal(wailsConfigData, &cfg); err == nil && cfg.Version != "" {
+		return cfg.Version
+	}
+	return "dev"
+}()
 
 // Config holds user-configurable tracking targets, persisted in config.json.
 type Config struct {
