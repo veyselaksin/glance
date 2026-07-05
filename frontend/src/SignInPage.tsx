@@ -1,26 +1,14 @@
 import { BrowserOpenURL } from '../wailsjs/runtime/runtime';
+import glanceBranding from './assets/images/glance-branding.png';
 
-interface Config {
-  github_username: string;
-  github_token: string;
-  client_id: string;
-  client_secret: string;
-  server_host: string;
-}
-
-export function SignInPage({
-  cfg,
-  onUpdate,
-  onSignIn,
-  isSigningIn,
-}: {
-  cfg: Config;
-  onUpdate: (field: string, val: string) => void;
+interface Props {
   onSignIn: () => void;
   isSigningIn: boolean;
-}) {
-  const hasCredentials = cfg.client_id.trim() !== '' && cfg.client_secret.trim() !== '';
+  userCode?: string;
+  verificationUri?: string;
+}
 
+export function SignInPage({ onSignIn, isSigningIn, userCode, verificationUri }: Props) {
   return (
     <div className="flex items-center justify-center min-h-screen bg-background text-on-surface mac-drag relative overflow-hidden">
       {/* Atmospheric glow */}
@@ -32,122 +20,62 @@ export function SignInPage({
       <main className="mac-no-drag relative z-20 w-full max-w-[420px] px-md animate-page-in">
         {/* Logo */}
         <div className="flex flex-col items-center mb-xl">
-          <div className="mb-md flex items-center justify-center p-sm glass-panel rounded-xl border border-outline">
-            <span className="material-symbols-outlined text-primary" style={{ fontSize: 32 }}>sensors</span>
-          </div>
-          <h1 className="text-headline-md font-headline-md font-bold text-on-surface tracking-tight">Glance</h1>
+          <img src={glanceBranding} alt="Glance" className="h-12 w-auto mb-md select-none" draggable={false} />
           <p className="text-body-md font-body-md text-on-surface-variant mt-xs">Performance tracking for developers</p>
         </div>
 
         {/* Login Card */}
         <div className="glass-panel rounded-2xl p-xl shadow-2xl border border-outline/60">
-
-          {hasCredentials ? (
-            /* ── STEP 2: Credentials entered → show Sign In ── */
+          {!isSigningIn ? (
             <>
               <div className="text-center mb-lg">
                 <h2 className="text-headline-sm font-headline-sm text-on-surface font-semibold">Connect your workflow</h2>
                 <p className="text-body-sm font-body-sm text-on-surface-variant mt-sm">
-                  Authenticate to access your dashboard and server logs.
+                  Authenticate with GitHub to access your dashboard.
                 </p>
               </div>
 
               <button
                 onClick={onSignIn}
-                disabled={isSigningIn}
-                className="primary-gradient-btn w-full flex items-center justify-center gap-sm py-md px-lg rounded-xl text-on-primary font-body-md font-semibold disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
-              >
-                {isSigningIn ? (
-                  <>
-                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin shrink-0" />
-                    <span>Waiting for browser sign-in…</span>
-                  </>
-                ) : (
-                  <>
-                    <GithubIcon />
-                    <span>Sign in with GitHub</span>
-                  </>
-                )}
-              </button>
-
-              <div className="mt-sm text-center">
-                <button
-                  onClick={() => { onUpdate('client_id', ''); onUpdate('client_secret', ''); }}
-                  className="text-[11px] text-on-surface-variant/40 hover:text-on-surface-variant transition-colors cursor-pointer"
-                >
-                  ← Change OAuth App credentials
-                </button>
-              </div>
-            </>
-          ) : (
-            /* ── STEP 1: Enter credentials ── */
-            <>
-              <div className="text-center mb-lg">
-                <h2 className="text-headline-sm font-headline-sm text-on-surface font-semibold">OAuth App setup</h2>
-                <p className="text-body-sm font-body-sm text-on-surface-variant mt-sm">
-                  Register a GitHub OAuth App and paste the credentials to continue.
-                </p>
-              </div>
-
-              {/* Callback URL info */}
-              <div className="mb-md p-sm bg-primary/10 border border-primary/20 rounded-lg">
-                <div className="text-[11px] text-on-surface-variant leading-relaxed">
-                  <span className="text-primary font-semibold block mb-xs">Authorization callback URL:</span>
-                  <code className="text-primary font-mono bg-black/30 px-1.5 py-0.5 rounded text-[10px] break-all select-text block mb-xs">
-                    http://localhost:57321/oauth/callback
-                  </code>
-                  <button
-                    className="text-primary hover:underline cursor-pointer text-[11px]"
-                    onClick={() => BrowserOpenURL('https://github.com/settings/applications/new')}
-                  >
-                    Register new OAuth App on GitHub ↗
-                  </button>
-                </div>
-              </div>
-
-              <div className="space-y-sm mb-lg">
-                <div>
-                  <label className="block text-label-caps font-label-caps text-on-surface-variant mb-xs">
-                    Client ID
-                  </label>
-                  <input
-                    className="mac-input"
-                    value={cfg.client_id}
-                    onChange={e => onUpdate('client_id', e.target.value)}
-                    placeholder="Ov23li..."
-                    spellCheck={false}
-                    autoComplete="off"
-                  />
-                </div>
-                <div>
-                  <label className="block text-label-caps font-label-caps text-on-surface-variant mb-xs">
-                    Client Secret
-                  </label>
-                  <input
-                    className="mac-input"
-                    type="password"
-                    value={cfg.client_secret}
-                    onChange={e => onUpdate('client_secret', e.target.value)}
-                    placeholder="••••••••••••••••••••••••••••••••••••••••"
-                    spellCheck={false}
-                    autoComplete="off"
-                  />
-                </div>
-              </div>
-
-              {/* Disabled button with hint */}
-              <button
-                disabled
-                className="w-full flex items-center justify-center gap-sm py-md px-lg rounded-xl font-body-md font-semibold cursor-not-allowed opacity-40"
-                style={{ background: 'linear-gradient(180deg,#007AFF 0%,#0056B3 100%)', color: '#fff' }}
+                className="primary-gradient-btn w-full flex items-center justify-center gap-sm py-md px-lg rounded-xl text-on-primary font-body-md font-semibold cursor-pointer"
               >
                 <GithubIcon />
                 <span>Sign in with GitHub</span>
               </button>
-              <p className="text-center text-[11px] text-on-surface-variant/40 mt-sm">
-                Fill in credentials above to enable sign-in
-              </p>
             </>
+          ) : (
+            <div className="space-y-md">
+              <div className="text-center mb-lg">
+                <h2 className="text-headline-sm font-headline-sm text-on-surface font-semibold">Authorize Glance</h2>
+                <p className="text-body-sm font-body-sm text-on-surface-variant mt-sm">
+                  Complete the authorization in your browser.
+                </p>
+              </div>
+
+              <div className="flex items-center justify-center gap-sm py-md">
+                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin shrink-0" />
+                <span className="text-on-surface">Waiting for authorization…</span>
+              </div>
+
+              {userCode && (
+                <div className="p-md bg-primary/10 border border-primary/20 rounded-lg text-center">
+                  <div className="text-[11px] text-on-surface-variant mb-xs uppercase tracking-wider">
+                    If prompted, enter this code
+                  </div>
+                  <div className="text-headline-lg font-mono font-bold text-primary tracking-[0.2em] select-text">
+                    {userCode}
+                  </div>
+                  {verificationUri && (
+                    <button
+                      onClick={() => BrowserOpenURL(verificationUri)}
+                      className="mt-sm text-[11px] text-primary hover:underline cursor-pointer"
+                    >
+                      Open {verificationUri} ↗
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
           )}
 
           {/* Footer */}
@@ -156,9 +84,9 @@ export function SignInPage({
             <div className="flex items-center justify-between mt-sm">
               <span className="text-code-sm font-code-sm text-on-surface-variant/70 flex items-center gap-xs">
                 <span className="material-symbols-outlined" style={{ fontSize: 14 }}>lock</span>
-                Secure Auth
+                Device Flow · No secret stored
               </span>
-              <span className="text-body-sm font-body-sm text-primary/50">Terms of Service</span>
+              <span className="text-body-sm font-body-sm text-primary/50">Open Source</span>
             </div>
           </div>
         </div>

@@ -40,7 +40,7 @@ export function SignOut():Promise<void>;
 
 export function StartContainer(arg1:string):Promise<void>;
 
-export function StartOAuthFlow(arg1:string,arg2:string):Promise<void>;
+export function StartDeviceFlow():Promise<void>;
 
 export function StopContainer(arg1:string):Promise<void>;
 

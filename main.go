@@ -17,10 +17,10 @@ func main() {
 
 	err := wails.Run(&options.App{
 		Title:     "Glance",
-		Width:     1024,
-		Height:    700,
-		MinWidth:  900,
-		MinHeight: 600,
+		Width:     1280,
+		Height:    800,
+		MinWidth:  1100,
+		MinHeight: 700,
 		// Transparent so the vibrancy material shows through.
 		BackgroundColour: &options.RGBA{R: 0, G: 0, B: 0, A: 0},
 		AssetServer: &assetserver.Options{

@@ -3,8 +3,6 @@ package main
 import (
 	"bytes"
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -28,12 +26,27 @@ import (
 
 // ─── Data types ───────────────────────────────────────────────────────────────
 
+// DefaultClientID is the GitHub OAuth App Client ID used by the Device Flow.
+//
+// The Client ID is a PUBLIC identifier — it is not a secret and is safe to
+// embed in an open-source binary. (Only the Client Secret must stay private,
+// and the Device Flow does not use one.)
+//
+// Project maintainers: create ONE OAuth App at
+// https://github.com/settings/applications/new (any name/homepage, callback URL
+// = urn:ietf:wg:oauth:2.0:oob, then enable "Device Flow" in the app settings)
+// and paste its Client ID here. Every user who runs this build will see that
+// app's name & icon on GitHub's authorization screen — no setup on their end.
+//
+// Forks that want their own branding can either change this constant or
+// override it per-user via the "Advanced" section in GitHub Settings.
+const DefaultClientID = "Iv23liUdlgD2PfwfmoAO"
+
 // Config holds user-configurable tracking targets, persisted in config.json.
 type Config struct {
 	GitHubUsername string         `json:"github_username"`
 	GitHubToken    string         `json:"github_token"`
-	ClientID       string         `json:"client_id"`
-	ClientSecret   string         `json:"client_secret"`
+	ClientID       string         `json:"client_id"` // optional override; defaults to DefaultClientID
 	ServerHost     string         `json:"server_host"`
 	Servers        []ServerConfig `json:"servers"`
 	DockerSocket   string         `json:"docker_socket"`
@@ -255,141 +268,32 @@ func (a *App) GetLastData() AppData {
 	return a.last
 }
 
-// StartOAuthFlow starts a local server on port 57321, opens the browser to sign in,
-// receives the code, exchanges it, and stores the token.
-func (a *App) StartOAuthFlow(customClientID, customClientSecret string) error {
-	if customClientID == "" || customClientSecret == "" {
-		return fmt.Errorf("GitHub Client ID and Client Secret are required")
+// StartDeviceFlow initiates GitHub's OAuth Device Flow: requests a device code,
+// opens the browser for the user to authorize, then polls GitHub until the user
+// approves (or the code expires). On success, stores the token + username and
+// emits the "oauth_success" event to the frontend. No Client Secret required.
+//
+// See: https://docs.github.com/en/apps/oauth-building-oauth-apps/authorizing-oauth-apps#device-flow
+func (a *App) StartDeviceFlow() error {
+	clientID := DefaultClientID
+	a.mu.RLock()
+	if a.cfg.ClientID != "" {
+		clientID = a.cfg.ClientID
 	}
+	a.mu.RUnlock()
 
-	a.mu.Lock()
-	clientID := customClientID
-	clientSecret := customClientSecret
-	a.mu.Unlock()
+	// 1. Request a device code from GitHub.
+	val := url.Values{}
+	val.Set("client_id", clientID)
+	val.Set("scope", "read:user repo")
 
-	b := make([]byte, 16)
-	_, _ = rand.Read(b)
-	state := hex.EncodeToString(b)
-
-	listener, err := net.Listen("tcp", "127.0.0.1:57321")
-	if err != nil {
-		return fmt.Errorf("port 57321 is already in use: %w", err)
-	}
-
-	mux := http.NewServeMux()
-	server := &http.Server{
-		Handler: mux,
-	}
-
-	mux.HandleFunc("/oauth/callback", func(w http.ResponseWriter, r *http.Request) {
-		callbackState := r.URL.Query().Get("state")
-		if callbackState != state {
-			http.Error(w, "State mismatch (CSRF check failed)", http.StatusBadRequest)
-			runtime.EventsEmit(a.ctx, "oauth_error", "State mismatch")
-			return
-		}
-
-		code := r.URL.Query().Get("code")
-		if code == "" {
-			http.Error(w, "Authorization code not found", http.StatusBadRequest)
-			runtime.EventsEmit(a.ctx, "oauth_error", "No code returned")
-			return
-		}
-
-		token, err := a.exchangeCodeForToken(clientID, clientSecret, code)
-		if err != nil {
-			http.Error(w, fmt.Sprintf("Failed to get token: %v", err), http.StatusInternalServerError)
-			runtime.EventsEmit(a.ctx, "oauth_error", err.Error())
-			return
-		}
-
-		username, err := a.fetchGitHubUsername(token)
-		if err != nil {
-			http.Error(w, fmt.Sprintf("Failed to fetch profile: %v", err), http.StatusInternalServerError)
-			runtime.EventsEmit(a.ctx, "oauth_error", err.Error())
-			return
-		}
-
-		a.mu.Lock()
-		a.cfg.GitHubToken = token
-		a.cfg.GitHubUsername = username
-		if customClientID != "" {
-			a.cfg.ClientID = customClientID
-			a.cfg.ClientSecret = customClientSecret
-		}
-		a.mu.Unlock()
-
-		_ = a.saveConfigInternal(a.cfg)
-
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		fmt.Fprintf(w, `
-			<!DOCTYPE html>
-			<html>
-			<head>
-				<title>Glance Authorized</title>
-				<style>
-					body {
-						font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-						background-color: #1E1E1E;
-						color: #FFFFFF;
-						display: flex;
-						flex-direction: column;
-						align-items: center;
-						justify-content: center;
-						height: 100vh;
-						margin: 0;
-					}
-					.container {
-						background: #2C2C2E;
-						padding: 40px;
-						border-radius: 12px;
-						box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-						text-align: center;
-					}
-					h1 { color: #0A84FF; font-size: 24px; margin-top: 0; }
-					p { color: #EBEBF5; opacity: 0.6; font-size: 14px; }
-				</style>
-			</head>
-			<body>
-				<div class="container">
-					<h1>Glance Connected!</h1>
-					<p>Successfully signed in with GitHub as <strong>%s</strong>. You can close this window now.</p>
-				</div>
-			</body>
-			</html>
-		`, username)
-
-		runtime.EventsEmit(a.ctx, "oauth_success", username)
-		go a.refresh()
-
-		go func() {
-			time.Sleep(1 * time.Second)
-			_ = server.Shutdown(context.Background())
-		}()
-	})
-
-	go func() {
-		_ = server.Serve(listener)
-	}()
-
-	authURL := fmt.Sprintf("https://github.com/login/oauth/authorize?client_id=%s&redirect_uri=http://localhost:57321/oauth/callback&state=%s&scope=read:user,repo", clientID, state)
-	runtime.BrowserOpenURL(a.ctx, authURL)
-	return nil
-}
-
-func (a *App) exchangeCodeForToken(clientID, clientSecret, code string) (string, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
-	val := url.Values{}
-	val.Set("client_id", clientID)
-	val.Set("client_secret", clientSecret)
-	val.Set("code", code)
-	val.Set("redirect_uri", "http://localhost:57321/oauth/callback")
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://github.com/login/oauth/access_token", strings.NewReader(val.Encode()))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost,
+		"https://github.com/login/device/code", strings.NewReader(val.Encode()))
 	if err != nil {
-		return "", err
+		return err
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("Accept", "application/json")
@@ -397,23 +301,129 @@ func (a *App) exchangeCodeForToken(clientID, clientSecret, code string) (string,
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return "", err
+		return fmt.Errorf("device code request failed: %w", err)
 	}
 	defer resp.Body.Close()
 
-	var res struct {
-		AccessToken string `json:"access_token"`
-		Error       string `json:"error"`
-		ErrorDesc   string `json:"error_description"`
+	var dc struct {
+		DeviceCode      string `json:"device_code"`
+		UserCode        string `json:"user_code"`
+		VerificationURI string `json:"verification_uri"`
+		ExpiresIn       int    `json:"expires_in"`
+		Interval        int    `json:"interval"`
+		Error           string `json:"error"`
+		ErrorDesc       string `json:"error_description"`
 	}
-	if err := json.NewDecoder(resp.Body).Decode(&res); err != nil {
-		return "", err
+	if err := json.NewDecoder(resp.Body).Decode(&dc); err != nil {
+		return fmt.Errorf("device code decode error: %w", err)
+	}
+	if dc.Error != "" {
+		return fmt.Errorf("%s: %s", dc.Error, dc.ErrorDesc)
+	}
+	if dc.DeviceCode == "" {
+		return fmt.Errorf("GitHub returned no device code")
 	}
 
-	if res.Error != "" {
-		return "", fmt.Errorf("%s: %s", res.Error, res.ErrorDesc)
+	// 2. Open the user's browser to the verification URI (with user_code pre-filled).
+	authURL := dc.VerificationURI
+	if !strings.Contains(authURL, "?") {
+		authURL = authURL + "?user_code=" + url.QueryEscape(dc.UserCode)
 	}
-	return res.AccessToken, nil
+	runtime.BrowserOpenURL(a.ctx, authURL)
+
+	// 3. Tell the frontend what code the user must enter, in case the browser
+	//    did not auto-fill or the user needs to type it on another device.
+	runtime.EventsEmit(a.ctx, "device_code", map[string]string{
+		"user_code":        dc.UserCode,
+		"verification_uri": dc.VerificationURI,
+	})
+
+	// 4. Poll the token endpoint until the user authorizes or the code expires.
+	interval := dc.Interval
+	if interval <= 0 {
+		interval = 5
+	}
+	expiresAt := time.Now().Add(time.Duration(dc.ExpiresIn) * time.Second)
+
+	go func() {
+		for time.Now().Before(expiresAt) {
+			time.Sleep(time.Duration(interval) * time.Second)
+
+			tval := url.Values{}
+			tval.Set("client_id", clientID)
+			tval.Set("device_code", dc.DeviceCode)
+			tval.Set("grant_type", "urn:ietf:params:oauth:grant-type:device_code")
+
+			tctx, tcancel := context.WithTimeout(context.Background(), 10*time.Second)
+			treq, err := http.NewRequestWithContext(tctx, http.MethodPost,
+				"https://github.com/login/oauth/access_token", strings.NewReader(tval.Encode()))
+			if err != nil {
+				tcancel()
+				continue
+			}
+			treq.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			treq.Header.Set("Accept", "application/json")
+			treq.Header.Set("User-Agent", "Glance/1.0")
+
+			tresp, err := http.DefaultClient.Do(treq)
+			if err != nil {
+				tcancel()
+				continue
+			}
+			var tr struct {
+				AccessToken string `json:"access_token"`
+				Error       string `json:"error"`
+				ErrorDesc   string `json:"error_description"`
+				Interval    int    `json:"interval"`
+			}
+			decodeErr := json.NewDecoder(tresp.Body).Decode(&tr)
+			tresp.Body.Close()
+			tcancel()
+
+			if decodeErr != nil {
+				continue
+			}
+
+			switch tr.Error {
+			case "authorization_pending":
+				continue
+			case "slow_down":
+				interval += 5
+				continue
+			case "expired_token":
+				runtime.EventsEmit(a.ctx, "oauth_error", "Device code expired. Please try again.")
+				return
+			case "access_denied":
+				runtime.EventsEmit(a.ctx, "oauth_error", "Authorization was denied.")
+				return
+			case "":
+				// success
+				if tr.AccessToken == "" {
+					runtime.EventsEmit(a.ctx, "oauth_error", "No access token returned.")
+					return
+				}
+				username, err := a.fetchGitHubUsername(tr.AccessToken)
+				if err != nil {
+					runtime.EventsEmit(a.ctx, "oauth_error", "Failed to fetch GitHub profile: "+err.Error())
+					return
+				}
+				a.mu.Lock()
+				a.cfg.GitHubToken = tr.AccessToken
+				a.cfg.GitHubUsername = username
+				a.mu.Unlock()
+				_ = a.saveConfigInternal(a.cfg)
+				runtime.EventsEmit(a.ctx, "oauth_success", username)
+				go a.refresh()
+				return
+			default:
+				runtime.EventsEmit(a.ctx, "oauth_error", tr.Error+": "+tr.ErrorDesc)
+				return
+			}
+		}
+		runtime.EventsEmit(a.ctx, "oauth_error", "Device code expired. Please try again.")
+	}()
+
+	return nil
 }
 
 func (a *App) fetchGitHubUsername(token string) (string, error) {

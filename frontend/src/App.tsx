@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef, Fragment } from 'react';
 import './App.css';
-import { SaveConfig, GetConfig, GetLastData, StartOAuthFlow, SignOut, GetContainers, StopContainer, StartContainer, DeleteContainer, StreamContainerLogs } from '../wailsjs/go/main/App';
+import { SaveConfig, GetConfig, GetLastData, StartDeviceFlow, SignOut, GetContainers, StopContainer, StartContainer, DeleteContainer, StreamContainerLogs } from '../wailsjs/go/main/App';
 import { EventsOn } from '../wailsjs/runtime/runtime';
 import { SignInPage } from './SignInPage';
 import { ServersView } from './ServersView';
+import glanceBranding from './assets/images/glance-branding.png';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -22,7 +23,6 @@ interface Config {
   github_username: string;
   github_token: string;
   client_id: string;
-  client_secret: string;
   server_host: string;
   servers: ServerConfig[];
   docker_socket: string;
@@ -328,7 +328,6 @@ function Dashboard({
 }) {
   const [tab, setTab] = useState<TabId>('overview');
   const [showToken, setShowToken] = useState(false);
-  const [showSecret, setShowSecret] = useState(false);
   const logRef = useRef<HTMLDivElement>(null);
 
   const fmtTime = (iso: string) => {
@@ -354,12 +353,7 @@ function Dashboard({
       <aside className="fixed left-0 top-0 h-full w-[240px] apple-sidebar border-r border-outline flex flex-col pt-12 pb-md px-sm z-50">
         {/* Header */}
         <div className="mb-xl px-sm mac-no-drag">
-          <div className="flex items-center gap-sm mb-xs">
-            <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-on-primary shadow-lg shadow-primary/20">
-              <span className="material-symbols-outlined filled font-bold" style={{ fontSize: 20 }}>sensors</span>
-            </div>
-            <h1 className="text-headline-sm font-headline-sm font-semibold text-on-surface">Glance</h1>
-          </div>
+          <img src={glanceBranding} alt="Glance" className="h-8 w-auto mb-xs select-none" draggable={false} />
           <p className="text-body-sm font-body-sm text-on-surface-variant">v1.0.4 - Agent Running</p>
         </div>
 
@@ -619,7 +613,7 @@ function Dashboard({
             <div className="max-w-2xl mx-auto animate-page-in space-y-xl">
               <div className="mb-md">
                 <h3 className="text-headline-lg font-headline-lg text-on-surface mb-xs">GitHub Settings</h3>
-                <p className="text-on-surface-variant font-body-md">Manage your GitHub OAuth application credentials.</p>
+                <p className="text-on-surface-variant font-body-md">Manage your GitHub connection.</p>
               </div>
 
               <div className="bg-surface-container border border-outline rounded-xl p-md">
@@ -629,62 +623,52 @@ function Dashboard({
                 </div>
                 <h4 className="text-headline-sm font-headline-sm text-on-surface mb-md">GitHub Settings</h4>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-md">
-                  <div className="space-y-sm">
-                    <label className="block text-label-caps font-label-caps text-on-surface-variant">OAuth Client ID</label>
-                    <input
-                      className="mac-input"
-                      value={cfg.client_id}
-                      onChange={e => onUpdate('client_id', e.target.value)}
-                      placeholder="Ov23li..."
-                      spellCheck={false}
-                      autoComplete="off"
-                    />
-                    <p className="text-[11px] text-on-surface-variant/60 font-body-sm">Required for OAuth sign-in flow.</p>
-                  </div>
-                  <div className="space-y-sm">
-                    <label className="block text-label-caps font-label-caps text-on-surface-variant">OAuth Client Secret</label>
-                    <div className="relative">
-                      <input
-                        className="mac-input pr-8"
-                        type={showSecret ? 'text' : 'password'}
-                        value={cfg.client_secret}
-                        onChange={e => onUpdate('client_secret', e.target.value)}
-                        placeholder="••••••••••••••••••••"
-                        spellCheck={false}
-                        autoComplete="off"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowSecret(v => !v)}
-                        aria-label={showSecret ? 'Hide secret' : 'Show secret'}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary transition-colors cursor-pointer"
-                      >
-                        <span className="material-symbols-outlined" style={{ fontSize: 16 }}>{showSecret ? 'visibility_off' : 'visibility'}</span>
-                      </button>
-                    </div>
-                    <p className="text-[11px] text-on-surface-variant/60 font-body-sm">
-                      Callback URL: <code className="text-primary font-mono text-[10px]">http://localhost:57321/oauth/callback</code>
-                    </p>
-                  </div>
-                </div>
-
-                {cfg.github_token && (
-                  <div className="mt-md pt-md border-t border-outline">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-sm">
-                        <div className="w-2 h-2 rounded-full bg-primary animate-status-pulse" />
-                        <span className="text-body-sm font-body-sm text-on-surface">Connected as <strong className="text-primary">@{cfg.github_username}</strong></span>
+                <div className="space-y-md">
+                  <div className="flex items-center justify-between p-md bg-background border border-outline rounded-lg">
+                    <div className="flex items-center gap-sm">
+                      <div className="w-2 h-2 rounded-full bg-primary animate-status-pulse" />
+                      <div>
+                        <div className="text-body-sm font-body-sm text-on-surface">
+                          {cfg.github_token
+                            ? <>Connected as <strong className="text-primary">@{cfg.github_username}</strong></>
+                            : <span className="text-on-surface-variant">Not signed in</span>}
+                        </div>
+                        <div className="text-[11px] text-on-surface-variant/60 font-body-sm mt-xs">
+                          Device Flow — no Client Secret stored on this machine.
+                        </div>
                       </div>
+                    </div>
+                    {cfg.github_token && (
                       <button
                         onClick={onSignOut}
                         className="text-body-sm font-body-sm text-warning hover:text-warning/80 transition-colors cursor-pointer"
                       >
                         Disconnect
                       </button>
-                    </div>
+                    )}
                   </div>
-                )}
+
+                  <details className="group border border-outline rounded-lg">
+                    <summary className="px-md py-sm cursor-pointer text-on-surface-variant hover:text-on-surface transition-colors text-body-sm font-body-sm select-none flex items-center gap-xs">
+                      <span className="material-symbols-outlined group-open:rotate-90 transition-transform" style={{ fontSize: 16 }}>chevron_right</span>
+                      Advanced: override OAuth Client ID
+                    </summary>
+                    <div className="px-md pb-md pt-xs space-y-sm">
+                      <p className="text-[11px] text-on-surface-variant/60 font-body-sm">
+                        Glance ships with a built-in Client ID. Override it only if you want to use your own GitHub OAuth App.
+                      </p>
+                      <label className="block text-label-caps font-label-caps text-on-surface-variant">OAuth Client ID (optional)</label>
+                      <input
+                        className="mac-input"
+                        value={cfg.client_id}
+                        onChange={e => onUpdate('client_id', e.target.value)}
+                        placeholder="Ov23li… (leave empty to use built-in)"
+                        spellCheck={false}
+                        autoComplete="off"
+                      />
+                    </div>
+                  </details>
+                </div>
 
                 <div className="mt-md flex justify-end gap-sm">
                   <button
@@ -929,7 +913,6 @@ export default function App() {
     github_username: '',
     github_token: '',
     client_id: '',
-    client_secret: '',
     server_host: '',
     servers: [],
     docker_socket: '/var/run/docker.sock',
@@ -939,6 +922,7 @@ export default function App() {
   const [dirty, setDirty]         = useState(false);
   const [flash, setFlash]         = useState<'saved' | 'error' | null>(null);
   const [isSigningIn, setIsSigningIn] = useState(false);
+  const [deviceCode, setDeviceCode] = useState<{ user_code: string; verification_uri: string } | null>(null);
   const [logs, setLogs]           = useState<LogLine[]>([
     { time: now(), tag: 'SYS', msg: 'System initialized',    color: 'text-primary/70' },
     { time: now(), tag: 'SYS', msg: 'Glance Agent started',  color: 'text-primary/70' },
@@ -970,14 +954,20 @@ export default function App() {
 
     const offSuccess = EventsOn('oauth_success', (username: string) => {
       setIsSigningIn(false);
+      setDeviceCode(null);
       GetConfig().then(setCfg);
       pushLog('GIT', `Connected to GitHub as @${username}`);
     });
 
     const offError = EventsOn('oauth_error', (msg: string) => {
       setIsSigningIn(false);
+      setDeviceCode(null);
       pushLog('ERR', `OAuth failed: ${msg}`);
       alert('OAuth connection failed: ' + msg);
+    });
+
+    const offDeviceCode = EventsOn('device_code', (payload: { user_code: string; verification_uri: string }) => {
+      setDeviceCode(payload);
     });
 
     const offLog = EventsOn('agent_log', (payload: { tag: string; msg: string }) => {
@@ -992,6 +982,7 @@ export default function App() {
       clearInterval(pollId);
       offSuccess();
       offError();
+      offDeviceCode();
       offLog();
       offData();
     };
@@ -1019,15 +1010,13 @@ export default function App() {
   }
 
   async function handleSignIn() {
-    if (!cfg.client_id || !cfg.client_secret) {
-      alert('Please enter your Client ID and Client Secret first.');
-      return;
-    }
     setIsSigningIn(true);
+    setDeviceCode(null);
     try {
-      await StartOAuthFlow(cfg.client_id, cfg.client_secret);
+      await StartDeviceFlow();
     } catch (e) {
       setIsSigningIn(false);
+      setDeviceCode(null);
       alert('OAuth error: ' + e);
     }
   }
@@ -1042,10 +1031,10 @@ export default function App() {
   if (!cfg.github_token) {
     return (
       <SignInPage
-        cfg={cfg}
-        onUpdate={update}
         onSignIn={handleSignIn}
         isSigningIn={isSigningIn}
+        userCode={deviceCode?.user_code}
+        verificationUri={deviceCode?.verification_uri}
       />
     );
   }

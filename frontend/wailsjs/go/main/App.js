@@ -78,8 +78,8 @@ export function StartContainer(arg1) {
   return window['go']['main']['App']['StartContainer'](arg1);
 }
 
-export function StartOAuthFlow(arg1, arg2) {
-  return window['go']['main']['App']['StartOAuthFlow'](arg1, arg2);
+export function StartDeviceFlow() {
+  return window['go']['main']['App']['StartDeviceFlow']();
 }
 
 export function StopContainer(arg1) {
