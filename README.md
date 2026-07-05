@@ -1,11 +1,35 @@
-# Glance
+<p align="center">
+  <img src="build/appicon.png" width="128" height="128" alt="Glance" />
+</p>
 
-A native macOS desktop dashboard for developers — GitHub activity, Docker
-containers, and SSH servers in one window.
+<h1 align="center">Glance</h1>
 
-Built with [Wails](https://wails.io) (Go backend + React/TypeScript frontend)
-and tuned for macOS: transparent titlebar with floating traffic lights,
-vibrancy, and a dark, material-inspired UI.
+<p align="center">
+  <strong>A native macOS desktop dashboard for developers.</strong><br/>
+  GitHub activity, Docker containers, and SSH servers — all in one glance.
+</p>
+
+<p align="center">
+  <a href="https://github.com/veyselaksin/glance/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/veyselaksin/glance/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="https://github.com/veyselaksin/glance/releases/latest"><img alt="Release" src="https://img.shields.io/github/v/release/veyselaksin/glance?logo=github&color=success"></a>
+  <a href="https://github.com/veyselaksin/homebrew-tap"><img alt="Homebrew" src="https://img.shields.io/badge/homebrew-veyselaksin%2Ftap-orange?logo=homebrew"></a>
+  <a href="#"><img alt="macOS" src="https://img.shields.io/badge/platform-macOS-000000?logo=apple&logoColor=white"></a>
+  <a href="#"><img alt="Go" src="https://img.shields.io/badge/Go-1.25-00ADD8?logo=go&logoColor=white"></a>
+  <a href="#"><img alt="Wails" src="https://img.shields.io/badge/built%20with-Wails-E6534E"></a>
+  <a href="./LICENSE"><img alt="License" src="https://img.shields.io/github/license/veyselaksin/glance?color=blue"></a>
+</p>
+
+<p align="center">
+  Built with <a href="https://wails.io">Wails</a> (Go backend + React/TypeScript
+  frontend) and tuned for macOS: transparent titlebar with floating traffic
+  lights, vibrancy, and a dark, material-inspired UI.
+</p>
+
+---
+
+> **Glance** — *see* what matters, skip the rest. Your GitHub commits, local
+> Docker fleet, and SSH boxes, surfaced on a single, quiet dashboard that
+> actually feels like it belongs on a Mac.
 
 ## Features
 
