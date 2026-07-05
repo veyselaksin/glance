@@ -3,10 +3,7 @@ name: Release Glance
 on:
   push:
     tags:
-      - "v*"
-
-permissions:
-  contents: write
+      - "v*" # Sadece v1.0.0 gibi bir tag attığımızda çalışacak
 
 jobs:
   build:
@@ -18,17 +15,17 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: ">=1.22"
+          go-version: "1.22"
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: ">=20"
+          node-version: "20"
 
-      - name: Install Wails CLI
+      - name: Install Wails
         run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
 
-      - name: Build Wails App (universal binary)
+      - name: Build Wails App
         run: wails build -platform darwin/universal
 
       - name: Ad-hoc Code Sign
@@ -40,10 +37,9 @@ jobs:
           zip -r ../../Glance-macOS.zip Glance.app
           cd ../..
 
-      - name: Publish GitHub Release
+      - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           files: Glance-macOS.zip
-          generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
