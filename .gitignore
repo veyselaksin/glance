@@ -44,3 +44,6 @@ yarn-error.log*
 
 # === Knowledge graph (local only) ===
 graphify-out/
+
+# === Release artifacts (built locally) ===
+/release/
