@@ -3,7 +3,7 @@ name: Release Glance
 on:
   push:
     tags:
-      - "v*" # Sadece v1.0.0 gibi bir tag attığımızda çalışacak
+      - "v*"
 
 jobs:
   build:
@@ -22,14 +22,31 @@ jobs:
         with:
           node-version: "20"
 
-      - name: Install Wails
-        run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
+      - name: Install Wails from Source
+        run: |
+          # pre-compiled binary yerine yerelde derleyerek kuruyoruz, bu LC_UUID hatasını çözer
+          git clone https://github.com/wailsapp/wails.git
+          cd wails/v2/cmd/wails
+          go install
+          cd ../../../..
+          rm -rf wails
+
+      - name: Install Frontend Dependencies
+        run: |
+          cd frontend
+          npm install
+          cd ..
 
       - name: Build Wails App
-        run: wails build -platform darwin/universal
+        run: |
+          # Path'i garantiye alıp universal build alıyoruz
+          export PATH=$PATH:$(go env GOPATH)/bin
+          wails build -platform darwin/universal
 
       - name: Ad-hoc Code Sign
-        run: codesign --force --deep --sign - build/bin/Glance.app
+        run: |
+          export PATH=$PATH:$(go env GOPATH)/bin
+          codesign --force --deep --sign - build/bin/Glance.app
 
       - name: Compress App to ZIP
         run: |
