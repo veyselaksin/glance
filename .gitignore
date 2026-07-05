@@ -8,6 +8,8 @@ Icon
 .Trashes
 
 # === Wails & Go Backend ===
+/build/bin/
+/frontend/dist/
 /backend/build/
 /backend/frontend/dist/
 /backend/frontend/node_modules/
@@ -39,3 +41,6 @@ yarn-error.log*
 *.swo
 .opencode/
 .build/
+
+# === Knowledge graph (local only) ===
+graphify-out/
