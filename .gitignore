@@ -8,7 +8,7 @@ Icon
 .Trashes
 
 # === Wails & Go Backend ===
-/build/bin/
+/build/
 /frontend/dist/
 /backend/build/
 /backend/frontend/dist/
