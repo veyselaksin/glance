@@ -24,10 +24,10 @@ jobs:
 
       - name: Install Wails from Source
         run: |
-          # pre-compiled binary yerine yerelde derleyerek kuruyoruz, bu LC_UUID hatasını çözer
+          # GOWORK=off diyerek wails reposu içindeki workspace çakışmasını engelliyoruz
           git clone https://github.com/wailsapp/wails.git
           cd wails/v2/cmd/wails
-          go install
+          GOWORK=off go install
           cd ../../../..
           rm -rf wails
 
@@ -39,7 +39,6 @@ jobs:
 
       - name: Build Wails App
         run: |
-          # Path'i garantiye alıp universal build alıyoruz
           export PATH=$PATH:$(go env GOPATH)/bin
           wails build -platform darwin/universal
 
