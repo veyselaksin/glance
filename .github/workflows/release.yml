@@ -5,6 +5,10 @@ on:
     tags:
       - "v*"
 
+# GitHub Actions'ın repoya yazma ve release oluşturma yetkisini açıyoruz
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: macos-latest
@@ -24,7 +28,6 @@ jobs:
 
       - name: Install Wails from Source
         run: |
-          # GOWORK=off diyerek wails reposu içindeki workspace çakışmasını engelliyoruz
           git clone https://github.com/wailsapp/wails.git
           cd wails/v2/cmd/wails
           GOWORK=off go install
