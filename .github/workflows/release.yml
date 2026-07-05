@@ -49,34 +49,23 @@ jobs:
           export PATH=$PATH:$(go env GOPATH)/bin
           codesign --force --deep --sign - build/bin/Glance.app
 
-      - name: Install create-dmg tool
-        run: brew install create-dmg
-
-      - name: Build DMG Package
+      - name: Compress App to ZIP
         run: |
-          # Hasarsız ve karantinasız kurulum sağlayan .dmg imajını üretiyoruz
-          create-dmg \
-            --volname "Glance Installer" \
-            --volicon "build/darwin/icon.icns" \
-            --window-pos 200 120 \
-            --window-size 600 400 \
-            --icon-size 100 \
-            --icon "Glance.app" 175 190 \
-            --app-drop-link 425 190 \
-            "Glance-macOS.dmg" \
-            "build/bin/Glance.app"
+          cd build/bin
+          zip -r ../../Glance-macOS.zip Glance.app
+          cd ../..
 
       - name: Create GitHub Release
         id: create_release
         uses: softprops/action-gh-release@v2
         with:
-          files: Glance-macOS.dmg
+          files: Glance-macOS.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Calculate SHA256 and Update Homebrew Cask
         run: |
-          SHA256_HASH=$(shasum -a 256 Glance-macOS.dmg | awk '{print $1}')
+          SHA256_HASH=$(shasum -a 256 Glance-macOS.zip | awk '{print $1}')
           VERSION=${GITHUB_REF#refs/tags/v}
 
           git clone https://x-access-token:${{ secrets.HOMEBREW_TAP_TOKEN }}@github.com/veyselaksin/homebrew-tap.git homebrew-repo
@@ -84,10 +73,11 @@ jobs:
 
           mkdir -p Casks
 
-          printf 'cask "glance" do\n  version "%s"\n  sha256 "%s"\n\n  url "https://github.com/veyselaksin/glance/releases/download/v#{version}/Glance-macOS.dmg"\n  name "Glance"\n  desc "Developer dashboard for monitoring GitHub stats, Docker and VPS"\n  homepage "https://github.com/veyselaksin/glance"\n\n  app "Glance.app"\nend\n' "$VERSION" "$SHA256_HASH" > Casks/glance.rb
+          # postflight bloğu eklenerek xattr tamamen otomatik hale getirildi!
+          printf 'cask "glance" do\n  version "%s"\n  sha256 "%s"\n\n  url "https://github.com/veyselaksin/glance/releases/download/v#{version}/Glance-macOS.zip"\n  name "Glance"\n  desc "Developer dashboard for monitoring GitHub stats, Docker and VPS"\n  homepage "https://github.com/veyselaksin/glance"\n\n  app "Glance.app"\n\n  postflight do\n    system_command "xattr", args: ["-cr", "#{appdir}/Glance.app"], sudo: false\n  end\nend\n' "$VERSION" "$SHA256_HASH" > Casks/glance.rb
 
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add Casks/glance.rb
-          git commit -m "bump: update glance to v${VERSION} with dmg package"
+          git commit -m "bump: update glance to v${VERSION} with automatic postflight xattr"
           git push origin main
