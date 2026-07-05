@@ -21,7 +21,6 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: "1.25"
-          cache: true
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -30,13 +29,16 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
-      - name: Verify Go build
-        run: go build ./...
+      - name: Download Go modules
+        run: go mod download
 
       - name: Install frontend dependencies
         run: npm install
         working-directory: frontend
 
-      - name: Verify frontend build
+      - name: Build frontend
         run: npm run build
         working-directory: frontend
+
+      - name: Verify Go build
+        run: go build ./...
