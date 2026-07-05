@@ -8,7 +8,20 @@ Icon
 .Trashes
 
 # === Wails & Go Backend ===
-/build/
+# Ignore build output, but track the mandatory icon assets so Wails
+# does not fall back to the default icon in CI/release builds.
+/build/*
+!/build/appicon.png
+!/build/darwin/
+/build/darwin/*
+!/build/darwin/icon.icns
+!/build/windows/
+/build/windows/*
+!/build/windows/icon.ico
+!/build/windows/info.json
+!/build/windows/wails.exe.manifest
+!/build/darwin/Info.plist
+!/build/darwin/Info.dev.plist
 /frontend/dist/
 /backend/build/
 /backend/frontend/dist/
