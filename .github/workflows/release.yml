@@ -1,11 +1,10 @@
-name: Release Glance
+name: Release and Update Homebrew
 
 on:
   push:
     tags:
       - "v*"
 
-# GitHub Actions'ın repoya yazma ve release oluşturma yetkisini açıyoruz
 permissions:
   contents: write
 
@@ -19,7 +18,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.25"
+          go-version: "1.22"
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -56,9 +55,54 @@ jobs:
           zip -r ../../Glance-macOS.zip Glance.app
           cd ../..
 
-      - name: Create Release
+      - name: Create GitHub Release
+        id: create_release
         uses: softprops/action-gh-release@v2
         with:
           files: Glance-macOS.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # --- OTOMASYON ADIMI BURADA BAŞLIYOR ---
+      - name: Calculate SHA256 and Update Homebrew Cask
+        run: |
+          # 1. Zip dosyasının hash kodunu hesapla ve değişkene ata
+          SHA256_HASH=$(shasum -a 256 Glance-macOS.zip | awk '{print $1}')
+          VERSION=${GITHUB_REF#refs/tags/v}
+
+          echo "Calculated SHA256: $SHA256_HASH"
+          echo "New Version: $VERSION"
+
+          # 2. homebrew-tap reposunu geçici olarak klonla
+          git clone https://x-access-token:${{ secrets.HOMEBREW_TAP_TOKEN }}@github.com/veyselaksin/homebrew-tap.git homebrew-repo
+          cd homebrew-repo
+
+          # 3. Casks/glance.rb dosyasını dinamik olarak sıfırdan oluştur/güncelle
+          mkdir -p Casks
+          cat << EOF > Casks/glance.rb
+          cask "glance" do
+            version "${VERSION}"
+            sha256 "${SHA256_HASH}"
+
+            url "https://github.com/veyselaksin/glance/releases/download/v\${version}/Glance-macOS.zip"
+            name "Glance"
+            desc "Developer dashboard for monitoring GitHub stats, Docker and VPS"
+            homepage "https://github.com/veyselaksin/glance"
+
+            app "Glance.app"
+
+            caveats <<~EOS
+              Glance is ad-hoc signed because it does not use a paid Apple Developer account.
+              If macOS Gatekeeper blocks it from opening on the first launch, please run the following command in your terminal:
+
+                xattr -cr /Applications/Glance.app
+            EOS
+          end
+          EOF
+
+          # 4. Değişiklikleri otomatik olarak homebrew-tap reposuna pushla
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Casks/glance.rb
+          git commit -m "bump: update glance to v${VERSION}"
+          git push origin main
