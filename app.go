@@ -42,6 +42,9 @@ import (
 // override it per-user via the "Advanced" section in GitHub Settings.
 const DefaultClientID = "Iv23liUdlgD2PfwfmoAO"
 
+// AppVersion is the application version, mirrored from wails.json.
+const AppVersion = "1.0.1"
+
 // Config holds user-configurable tracking targets, persisted in config.json.
 type Config struct {
 	GitHubUsername string         `json:"github_username"`
@@ -261,11 +264,16 @@ func (a *App) GetConfig() Config {
 	return a.cfg
 }
 
-// GetLastData returns the most recently fetched snapshot to the frontend.
+// GetLastData returns the most recently cached app data snapshot.
 func (a *App) GetLastData() AppData {
 	a.mu.RLock()
 	defer a.mu.RUnlock()
 	return a.last
+}
+
+// AppVersion returns the application version, mirrored from wails.json.
+func (a *App) AppVersion() string {
+	return AppVersion
 }
 
 // StartDeviceFlow initiates GitHub's OAuth Device Flow: requests a device code,

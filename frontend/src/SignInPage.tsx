@@ -1,4 +1,6 @@
+import { useState, useEffect } from 'react';
 import { BrowserOpenURL } from '../wailsjs/runtime/runtime';
+import { AppVersion } from '../wailsjs/go/main/App';
 import glanceBranding from './assets/images/glance-branding.png';
 
 interface Props {
@@ -9,6 +11,8 @@ interface Props {
 }
 
 export function SignInPage({ onSignIn, isSigningIn, userCode, verificationUri }: Props) {
+  const [appVersion, setAppVersion] = useState('');
+  useEffect(() => { AppVersion().then(setAppVersion); }, []);
   return (
     <div className="flex items-center justify-center min-h-screen bg-background text-on-surface mac-drag relative overflow-hidden">
       {/* Atmospheric glow */}
@@ -95,7 +99,7 @@ export function SignInPage({ onSignIn, isSigningIn, userCode, verificationUri }:
         <div className="mt-xl text-center flex items-center justify-center gap-md text-code-sm font-code-sm text-on-surface-variant/50">
           <div className="flex items-center gap-xs">
             <div className="w-1.5 h-1.5 rounded-full bg-primary/60" />
-            v1.0.4 - Agent Running
+            v{appVersion || '1.0.0'} - Agent Running
           </div>
           <div className="w-px h-3 bg-white/10" />
           <span>Build 2409-F</span>

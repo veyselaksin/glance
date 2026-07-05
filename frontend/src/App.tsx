@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, Fragment } from 'react';
 import './App.css';
-import { SaveConfig, GetConfig, GetLastData, StartDeviceFlow, SignOut, GetContainers, StopContainer, StartContainer, DeleteContainer, StreamContainerLogs } from '../wailsjs/go/main/App';
+import { SaveConfig, GetConfig, GetLastData, StartDeviceFlow, SignOut, GetContainers, StopContainer, StartContainer, DeleteContainer, StreamContainerLogs, AppVersion } from '../wailsjs/go/main/App';
 import { EventsOn } from '../wailsjs/runtime/runtime';
 import { SignInPage } from './SignInPage';
 import { ServersView } from './ServersView';
@@ -329,6 +329,7 @@ function Dashboard({
   const [tab, setTab] = useState<TabId>('overview');
   const [showToken, setShowToken] = useState(false);
   const logRef = useRef<HTMLDivElement>(null);
+  const [appVersion, setAppVersion] = useState('');
 
   const fmtTime = (iso: string) => {
     if (!iso) return '—';
@@ -338,6 +339,10 @@ function Dashboard({
   useEffect(() => {
     if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
   }, [logs]);
+
+  useEffect(() => {
+    AppVersion().then(setAppVersion);
+  }, []);
 
   const navItems: { id: TabId; icon: string; label: string }[] = [
     { id: 'overview', icon: 'dashboard',          label: 'Overview'        },
@@ -354,7 +359,7 @@ function Dashboard({
         {/* Header */}
         <div className="mb-xl px-sm mac-no-drag">
           <img src={glanceBranding} alt="Glance" className="h-8 w-auto mb-xs select-none" draggable={false} />
-          <p className="text-body-sm font-body-sm text-on-surface-variant">v1.0.4 - Agent Running</p>
+          <p className="text-body-sm font-body-sm text-on-surface-variant">v{appVersion || '1.0.0'} - Agent Running</p>
         </div>
 
         {/* Nav */}
