@@ -517,8 +517,13 @@ func (a *App) GetGitHubStats(username string) GitHubStats {
 		return a.getGitHubStatsScraper(username)
 	}
 
-	contributions := a.getContributionsToday(username, token)
-	commits := a.getGitHubCommitsToday(username, token)
+	contributions, unauthorizedC := a.getContributionsToday(username, token)
+	commits, unauthorizedM := a.getGitHubCommitsToday(username, token)
+
+	if unauthorizedC || unauthorizedM {
+		fmt.Printf("[GITHUB] token expired or unauthorized, falling back to scraper\n")
+		return a.getGitHubStatsScraper(username)
+	}
 
 	fmt.Printf("[GITHUB] user=%s contributions=%d commits=%d\n", username, contributions, commits)
 
@@ -533,7 +538,7 @@ func (a *App) GetGitHubStats(username string) GitHubStats {
 // today's contribution count. GitHub's calendar is ordered chronologically;
 // the last entry is today (in GitHub's configured timezone). We try matching
 // against both local and UTC dates, then fall back to the last calendar day.
-func (a *App) getContributionsToday(username, token string) int {
+func (a *App) getContributionsToday(username, token string) (int, bool) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
@@ -559,12 +564,12 @@ func (a *App) getContributionsToday(username, token string) int {
 	reqBytes, err := json.Marshal(query)
 	if err != nil {
 		fmt.Printf("[GITHUB] GraphQL marshal error: %v\n", err)
-		return 0
+		return 0, false
 	}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://api.github.com/graphql", strings.NewReader(string(reqBytes)))
 	if err != nil {
-		return 0
+		return 0, false
 	}
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("Content-Type", "application/json")
@@ -573,13 +578,13 @@ func (a *App) getContributionsToday(username, token string) int {
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		fmt.Printf("[GITHUB] GraphQL request error: %v\n", err)
-		return 0
+		return 0, false
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
 		fmt.Printf("[GITHUB] GraphQL HTTP %d\n", resp.StatusCode)
-		return 0
+		return 0, resp.StatusCode == http.StatusUnauthorized
 	}
 
 	var res struct {
@@ -605,12 +610,12 @@ func (a *App) getContributionsToday(username, token string) int {
 
 	if err := json.NewDecoder(resp.Body).Decode(&res); err != nil {
 		fmt.Printf("[GITHUB] GraphQL decode error: %v\n", err)
-		return 0
+		return 0, false
 	}
 
 	if len(res.Errors) > 0 {
 		fmt.Printf("[GITHUB] GraphQL errors: %s\n", res.Errors[0].Message)
-		return 0
+		return 0, false
 	}
 
 	// Collect all days from all weeks into a flat slice.
@@ -626,7 +631,7 @@ func (a *App) getContributionsToday(username, token string) int {
 		}
 	}
 	if len(allDays) == 0 {
-		return 0
+		return 0, false
 	}
 
 	fmt.Printf("[GITHUB] calendar totalContributions=%d, lastDay=%s count=%d\n",
@@ -647,7 +652,7 @@ func (a *App) getContributionsToday(username, token string) int {
 	for i := len(allDays) - 1; i >= 0; i-- {
 		d := allDays[i]
 		if d.Date == todayLocal || d.Date == todayUTC {
-			return d.ContributionCount
+			return d.ContributionCount, false
 		}
 	}
 
@@ -656,12 +661,12 @@ func (a *App) getContributionsToday(username, token string) int {
 	for i := len(allDays) - 1; i >= 0; i-- {
 		d := allDays[i]
 		if d.Date == yesterdayLocal || d.Date == yesterdayUTC {
-			return d.ContributionCount
+			return d.ContributionCount, false
 		}
 	}
 
 	// Final fallback: return the last calendar day's count.
-	return allDays[len(allDays)-1].ContributionCount
+	return allDays[len(allDays)-1].ContributionCount, false
 }
 
 // getGitHubCommitsToday counts actual commits pushed today across all of the
@@ -672,7 +677,7 @@ func (a *App) getContributionsToday(username, token string) int {
 //
 // This bypasses the contribution calendar's processing delay and includes
 // private repos (token has `repo` scope).
-func (a *App) getGitHubCommitsToday(username, token string) int {
+func (a *App) getGitHubCommitsToday(username, token string) (int, bool) {
 	// Calculate the start of "today" in the user's local timezone, then
 	// convert to UTC for the `since` parameter.
 	now := time.Now()
@@ -688,7 +693,7 @@ func (a *App) getGitHubCommitsToday(username, token string) int {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet,
 		"https://api.github.com/user/repos?sort=pushed&per_page=20&affiliation=owner", nil)
 	if err != nil {
-		return 0
+		return 0, false
 	}
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("Accept", "application/json")
@@ -697,12 +702,12 @@ func (a *App) getGitHubCommitsToday(username, token string) int {
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		fmt.Printf("[GITHUB] repos list error: %v\n", err)
-		return 0
+		return 0, false
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
 		fmt.Printf("[GITHUB] repos list HTTP %d\n", resp.StatusCode)
-		return 0
+		return 0, resp.StatusCode == http.StatusUnauthorized
 	}
 
 	var repos []struct {
@@ -711,7 +716,7 @@ func (a *App) getGitHubCommitsToday(username, token string) int {
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&repos); err != nil {
 		fmt.Printf("[GITHUB] repos decode error: %v\n", err)
-		return 0
+		return 0, false
 	}
 
 	// Filter: only check repos that were pushed after the start of today.
@@ -733,7 +738,7 @@ func (a *App) getGitHubCommitsToday(username, token string) int {
 	fmt.Printf("[GITHUB] repos pushed today: %d (%v)\n", len(candidates), candidates)
 
 	if len(candidates) == 0 {
-		return 0
+		return 0, false
 	}
 
 	// 2. For each candidate repo, count commits since start-of-today.
@@ -748,7 +753,7 @@ func (a *App) getGitHubCommitsToday(username, token string) int {
 		totalCommits += count
 	}
 
-	return totalCommits
+	return totalCommits, false
 }
 
 // countRepoCommits fetches commits for a single repo since the given UTC
@@ -808,7 +813,7 @@ func (a *App) getGitHubStatsScraper(username string) GitHubStats {
 
 	todayLocal := time.Now().Format("2006-01-02")
 	todayUTC := time.Now().UTC().Format("2006-01-02")
-	commits := a.getGitHubCommitsToday(username, "")
+	commits, _ := a.getGitHubCommitsToday(username, "")
 	re1 := regexp.MustCompile(`data-date="` + regexp.QuoteMeta(todayLocal) + `"[^>]*data-count="(\d+)"`)
 	if m := re1.FindSubmatch(body); m != nil {
 		count, _ := strconv.Atoi(string(m[1]))
