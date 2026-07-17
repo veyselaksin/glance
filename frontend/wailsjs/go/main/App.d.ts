@@ -28,6 +28,8 @@ export function GetServerPing(arg1:string):Promise<main.ServerStatus>;
 
 export function GetServers():Promise<Array<main.ServerConfig>>;
 
+export function RestartContainer(arg1:string):Promise<void>;
+
 export function SSHResize(arg1:string,arg2:number,arg3:number):Promise<void>;
 
 export function SSHWrite(arg1:string,arg2:string):Promise<void>;

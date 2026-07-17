@@ -100,13 +100,19 @@ type DockerStats struct {
 
 // ContainerInfo holds per-container metadata and live resource metrics.
 type ContainerInfo struct {
-	ID       string  `json:"id"`
-	Name     string  `json:"name"`
-	Image    string  `json:"image"`
-	State    string  `json:"state"`
-	Status   string  `json:"status"`
-	CPUUsage float64 `json:"cpu_usage"` // percentage
-	MemUsage uint64  `json:"mem_usage"` // bytes
+	ID         string  `json:"id"`
+	Name       string  `json:"name"`
+	Image      string  `json:"image"`
+	State      string  `json:"state"`
+	Status     string  `json:"status"`
+	CPUUsage   float64 `json:"cpu_usage"`   // percentage
+	MemUsage   uint64  `json:"mem_usage"`   // bytes
+	MemPercent float64 `json:"mem_percent"` // percentage of limit
+	NetworkRX  uint64  `json:"network_rx"`  // cumulative bytes received
+	NetworkTX  uint64  `json:"network_tx"`  // cumulative bytes sent
+	IORead     uint64  `json:"io_read"`     // cumulative bytes read from disk
+	IOWrite    uint64  `json:"io_write"`    // cumulative bytes written to disk
+	PIDCount   uint32  `json:"pid_count"`   // current number of PIDs
 }
 
 // ServerStatus holds TCP reachability and latency for a remote host.
@@ -957,6 +963,22 @@ func (a *App) GetContainers() ([]ContainerInfo, error) {
 					)
 					if sr.MemoryStats.Usage > 0 {
 						info.MemUsage = sr.MemoryStats.Usage
+						if sr.MemoryStats.Limit > 0 {
+							info.MemPercent = (float64(sr.MemoryStats.Usage) / float64(sr.MemoryStats.Limit)) * 100.0
+						}
+					}
+					info.PIDCount = uint32(sr.PidsStats.Current)
+					for _, net := range sr.Networks {
+						info.NetworkRX += net.RxBytes
+						info.NetworkTX += net.TxBytes
+					}
+					for _, entry := range sr.BlkioStats.IoServiceBytesRecursive {
+						switch entry.Op {
+						case "read":
+							info.IORead += entry.Value
+						case "write":
+							info.IOWrite += entry.Value
+						}
 					}
 				}
 				_ = stats.Body.Close()
@@ -1073,6 +1095,25 @@ func (a *App) DeleteContainer(id string) error {
 	defer cli.Close()
 
 	return cli.ContainerRemove(ctx, id, container.RemoveOptions{Force: true})
+}
+
+// RestartContainer restarts a running container by ID.
+// Exposed to the Wails frontend.
+func (a *App) RestartContainer(id string) error {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	a.mu.RLock()
+	socketPath := a.cfg.DockerSocket
+	a.mu.RUnlock()
+
+	cli, err := dockerClient(socketPath)
+	if err != nil {
+		return err
+	}
+	defer cli.Close()
+
+	return cli.ContainerRestart(ctx, id, container.StopOptions{})
 }
 
 // GetServerPing checks reachability and latency via ICMP ping (using the system ping command)

@@ -166,6 +166,12 @@ export namespace main {
 	    status: string;
 	    cpu_usage: number;
 	    mem_usage: number;
+	    mem_percent: number;
+	    network_rx: number;
+	    network_tx: number;
+	    io_read: number;
+	    io_write: number;
+	    pid_count: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new ContainerInfo(source);
@@ -180,6 +186,12 @@ export namespace main {
 	        this.status = source["status"];
 	        this.cpu_usage = source["cpu_usage"];
 	        this.mem_usage = source["mem_usage"];
+	        this.mem_percent = source["mem_percent"];
+	        this.network_rx = source["network_rx"];
+	        this.network_tx = source["network_tx"];
+	        this.io_read = source["io_read"];
+	        this.io_write = source["io_write"];
+	        this.pid_count = source["pid_count"];
 	    }
 	}
 	

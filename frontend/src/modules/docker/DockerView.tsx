@@ -1,6 +1,7 @@
 import type { Config, AppData } from '../../types';
 import { useContainers } from './useContainers';
 import { DockerContainers } from './DockerContainers';
+import { Toast } from '../../components/Toast';
 
 interface DockerViewProps {
   cfg: Config;
@@ -47,19 +48,19 @@ export function DockerView({ cfg, data, onUpdate }: DockerViewProps) {
             <div className="bg-background border border-outline rounded-lg p-md text-center">
               <div className="text-label-caps font-label-caps text-on-surface-variant mb-sm">RUNNING</div>
               <div className="text-[28px] font-bold text-primary font-mono leading-none">
-                {data?.docker.error ? '—' : (data?.docker.running ?? 0)}
+                {data?.docker.error ? '\u2014' : (data?.docker.running ?? 0)}
               </div>
             </div>
             <div className="bg-background border border-outline rounded-lg p-md text-center">
               <div className="text-label-caps font-label-caps text-on-surface-variant mb-sm">STOPPED</div>
               <div className="text-[28px] font-bold text-warning font-mono leading-none">
-                {data?.docker.error ? '—' : (data?.docker.stopped ?? 0)}
+                {data?.docker.error ? '\u2014' : (data?.docker.stopped ?? 0)}
               </div>
             </div>
             <div className="bg-background border border-outline rounded-lg p-md text-center">
               <div className="text-label-caps font-label-caps text-on-surface-variant mb-sm">TOTAL</div>
               <div className="text-[28px] font-bold text-on-surface font-mono leading-none">
-                {data?.docker.error ? '—' : (data?.docker.total ?? 0)}
+                {data?.docker.error ? '\u2014' : (data?.docker.total ?? 0)}
               </div>
             </div>
           </div>
@@ -73,13 +74,20 @@ export function DockerView({ cfg, data, onUpdate }: DockerViewProps) {
           </div>
           <div className="flex items-center justify-between text-body-sm">
             <span className="text-on-surface-variant">Version</span>
-            <span className="text-on-surface font-code-sm">{data?.docker.version || '—'}</span>
+            <span className="text-on-surface font-code-sm">{data?.docker.version || '\u2014'}</span>
           </div>
         </div>
       </div>
 
+      {ctrl.toast && (
+        <div className="flex justify-center">
+          <Toast toast={ctrl.toast} onDismiss={ctrl.dismissToast} />
+        </div>
+      )}
+
       <DockerContainers
         containers={ctrl.containers}
+        statsMap={ctrl.statsMap}
         loading={ctrl.loading}
         error={ctrl.error}
         expandedId={ctrl.expandedId}
@@ -91,6 +99,7 @@ export function DockerView({ cfg, data, onUpdate }: DockerViewProps) {
         handleLogs={ctrl.handleLogs}
         handleStop={ctrl.handleStop}
         handleStart={ctrl.handleStart}
+        handleRestart={ctrl.handleRestart}
         handleDelete={ctrl.handleDelete}
       />
     </div>

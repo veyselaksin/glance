@@ -33,6 +33,12 @@ export interface ContainerInfo {
   status: string;
   cpu_usage: number;
   mem_usage: number;
+  mem_percent: number;
+  network_rx: number;
+  network_tx: number;
+  io_read: number;
+  io_write: number;
+  pid_count: number;
 }
 
 export interface LogLine {

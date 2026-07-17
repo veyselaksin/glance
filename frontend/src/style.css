@@ -132,3 +132,15 @@ html, body {
 
 /* ─── Table styles ───────────────────────────────────────────────────────── */
 table { border-collapse: collapse; }
+
+/* ─── Toast ──────────────────────────────────────────────────────────────── */
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(-8px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes toast-out {
+  from { opacity: 1; transform: translateY(0) scale(1); }
+  to   { opacity: 0; transform: translateY(-8px) scale(0.96); }
+}
+.animate-toast-in  { animation: toast-in 0.2s ease-out; }
+.animate-toast-out { animation: toast-out 0.2s ease-in forwards; }

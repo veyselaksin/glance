@@ -54,6 +54,10 @@ export function GetServers() {
   return window['go']['main']['App']['GetServers']();
 }
 
+export function RestartContainer(arg1) {
+  return window['go']['main']['App']['RestartContainer'](arg1);
+}
+
 export function SSHResize(arg1, arg2, arg3) {
   return window['go']['main']['App']['SSHResize'](arg1, arg2, arg3);
 }
