@@ -36,9 +36,23 @@ jobs:
         run: npm install
         working-directory: frontend
 
+      - name: Lint frontend
+        run: npm run lint
+        working-directory: frontend
+
+      - name: Test frontend
+        run: npm test
+        working-directory: frontend
+
       - name: Build frontend
         run: npm run build
         working-directory: frontend
 
       - name: Verify Go build
         run: GOFLAGS=-mod=mod go build ./...
+
+      - name: Vet Go
+        run: GOFLAGS=-mod=mod go vet ./...
+
+      - name: Test Go
+        run: GOFLAGS=-mod=mod go test ./...

@@ -82,7 +82,7 @@ export function TerminalPanel({ serverID, serverName, onDisconnect }: TerminalPa
 
     const onResize = () => {
       if (fitRef.current) {
-        try { fitRef.current.fit(); } catch {}
+        try { fitRef.current.fit(); } catch { /* not yet attached */ }
       }
     };
     window.addEventListener('resize', onResize);

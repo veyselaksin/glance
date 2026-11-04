@@ -10,7 +10,7 @@ export function useServers() {
     try {
       const list = await getServers();
       setServers(list ?? []);
-    } catch {}
+    } catch { /* keep previous list */ }
   }, []);
 
   useEffect(() => {
