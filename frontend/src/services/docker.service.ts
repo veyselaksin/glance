@@ -1,4 +1,4 @@
-import { GetContainers, StopContainer, StartContainer, RestartContainer, DeleteContainer, StreamContainerLogs } from '../../wailsjs/go/main/App';
+import { GetContainers, StopContainer, StartContainer, RestartContainer, DeleteContainer, StreamContainerLogs } from '../../wailsjs/go/api/DockerService';
 import type { ContainerInfo } from '../types';
 
 export function getContainers(): Promise<ContainerInfo[]> {

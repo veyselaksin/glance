@@ -1,4 +1,4 @@
-import { StartDeviceFlow, SignOut } from '../../wailsjs/go/main/App';
+import { StartDeviceFlow, SignOut } from '../../wailsjs/go/api/GitHubService';
 
 export function startDeviceFlow(): Promise<void> {
   return StartDeviceFlow();
