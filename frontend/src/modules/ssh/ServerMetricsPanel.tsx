@@ -1,3 +1,4 @@
+import { Icon } from '../../components/Icon';
 import type { ServerConfig, PingResult, ServerMetrics } from '../../types';
 import { formatBytes, formatUptime, pct } from '../../utils/format';
 import { MetricCard } from '../../components/MetricCard';
@@ -16,7 +17,7 @@ export function ServerMetricsPanel({ server, metrics, ping, metricsLoading, fetc
     <div className="h-full bg-surface-container border border-outline rounded-xl flex flex-col overflow-hidden">
       <div className="px-md py-sm border-b border-outline flex items-center justify-between">
         <div className="flex items-center gap-sm">
-          <span className="material-symbols-outlined text-primary" style={{ fontSize: 18 }}>monitoring</span>
+          <Icon name="monitoring" size={18} className="text-primary" />
           <div>
             <span className="text-body-sm font-body-sm font-semibold text-on-surface">{server.name}</span>
             <span className="text-on-surface-variant text-[11px] font-code-sm ml-sm">{server.username}@{server.ip}</span>
@@ -34,14 +35,14 @@ export function ServerMetricsPanel({ server, metrics, ping, metricsLoading, fetc
             disabled={metricsLoading}
             className="flex items-center gap-xs px-sm py-xs rounded text-on-surface-variant hover:text-primary transition-colors text-body-sm font-body-sm cursor-pointer"
           >
-            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>{metricsLoading ? 'progress_activity' : 'refresh'}</span>
+            <Icon name={metricsLoading ? 'progress_activity' : 'refresh'} size={16} />
             Refresh
           </button>
           <button
             onClick={onOpenTerminal}
             className="flex items-center gap-xs bg-primary text-on-primary px-md py-xs rounded font-body-sm text-body-sm font-semibold hover:brightness-110 active:scale-95 duration-100 transition-all cursor-pointer"
           >
-            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>terminal</span>
+            <Icon name="terminal" size={16} />
             Connect Terminal
           </button>
         </div>
@@ -50,13 +51,13 @@ export function ServerMetricsPanel({ server, metrics, ping, metricsLoading, fetc
       <div className="flex-1 overflow-y-auto custom-scrollbar p-md">
         {metrics?.error ? (
           <div className="flex flex-col items-center justify-center h-full">
-            <span className="material-symbols-outlined text-error/50" style={{ fontSize: 48 }}>error</span>
+            <Icon name="error" size={48} className="text-error/50" />
             <p className="text-error text-body-sm mt-md font-code-sm">{metrics.error}</p>
             <p className="text-on-surface-variant text-[11px] mt-xs">Check credentials and network connectivity.</p>
           </div>
         ) : !metrics ? (
           <div className="flex items-center justify-center h-full">
-            <span className="material-symbols-outlined text-on-surface-variant/30 animate-spin" style={{ fontSize: 32 }}>progress_activity</span>
+            <Icon name="progress_activity" size={32} className="text-on-surface-variant/30 animate-spin" />
           </div>
         ) : (
           <div className="space-y-md">
@@ -67,7 +68,7 @@ export function ServerMetricsPanel({ server, metrics, ping, metricsLoading, fetc
                 value={`${metrics.cpu_usage.toFixed(1)}%`}
                 sub={metrics.load_avg ? `Load: ${metrics.load_avg}` : undefined}
                 pctVal={metrics.cpu_usage}
-                color="#0A84FF"
+                tone="primary"
               />
               <MetricCard
                 icon="memory_alt"
@@ -75,7 +76,7 @@ export function ServerMetricsPanel({ server, metrics, ping, metricsLoading, fetc
                 value={formatBytes(metrics.mem_used)}
                 sub={`of ${formatBytes(metrics.mem_total)}`}
                 pctVal={pct(metrics.mem_used, metrics.mem_total)}
-                color="#30D158"
+                tone="success"
               />
               <MetricCard
                 icon="storage"
@@ -83,14 +84,14 @@ export function ServerMetricsPanel({ server, metrics, ping, metricsLoading, fetc
                 value={formatBytes(metrics.disk_used)}
                 sub={`of ${formatBytes(metrics.disk_total)}`}
                 pctVal={pct(metrics.disk_used, metrics.disk_total)}
-                color="#FF9500"
+                tone="warning"
               />
               <MetricCard
                 icon="schedule"
                 label="Uptime"
                 value={formatUptime(metrics.uptime)}
                 sub={metrics.load_avg ? `Load avg: ${metrics.load_avg}` : undefined}
-                color="#BF5AF2"
+                tone="purple"
               />
             </div>
 
@@ -123,14 +124,14 @@ export function ServerMetricsPanel({ server, metrics, ping, metricsLoading, fetc
                   onClick={onOpenTerminal}
                   className="flex items-center gap-xs px-md py-xs bg-surface-container-high border border-outline rounded text-body-sm font-body-sm text-on-surface hover:border-primary hover:text-primary transition-colors cursor-pointer"
                 >
-                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>terminal</span>
+                  <Icon name="terminal" size={16} />
                   Open SSH Shell
                 </button>
                 <button
                   onClick={() => fetchMetrics(server.id)}
                   className="flex items-center gap-xs px-md py-xs bg-surface-container-high border border-outline rounded text-body-sm font-body-sm text-on-surface hover:border-primary hover:text-primary transition-colors cursor-pointer"
                 >
-                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>refresh</span>
+                  <Icon name="refresh" size={16} />
                   Refresh Metrics
                 </button>
               </div>

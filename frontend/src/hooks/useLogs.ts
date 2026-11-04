@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { now } from '../utils/format';
 import type { LogLine } from '../types';
 

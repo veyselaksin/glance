@@ -1,10 +1,7 @@
+import { Icon } from '../../components/Icon';
 export function DocsView() {
   return (
     <div className="max-w-2xl mx-auto animate-page-in space-y-xl">
-      <div className="mb-md">
-        <h3 className="text-headline-lg font-headline-lg text-on-surface mb-xs">Documentation</h3>
-        <p className="text-on-surface-variant font-body-md">Learn how Glance's hybrid architecture works.</p>
-      </div>
 
       <div className="bg-surface-container border border-outline rounded-xl p-md space-y-md">
         <div>
@@ -23,7 +20,7 @@ export function DocsView() {
               { icon: 'dns',          label: 'ICMP/HTTP Ping',     desc: 'Pings configured server host for latency tracking.' },
             ].map(item => (
               <div key={item.label} className="flex items-start gap-sm p-sm bg-background border border-outline rounded">
-                <span className="material-symbols-outlined text-primary shrink-0" style={{ fontSize: 18 }}>{item.icon}</span>
+                <Icon name={item.icon} size={18} className="text-primary shrink-0" />
                 <div>
                   <div className="text-body-sm font-body-sm text-on-surface font-semibold">{item.label}</div>
                   <div className="text-[11px] text-on-surface-variant">{item.desc}</div>

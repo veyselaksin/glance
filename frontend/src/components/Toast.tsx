@@ -1,3 +1,4 @@
+import { Icon } from './Icon';
 import { useEffect, useState } from 'react';
 
 export interface ToastData {
@@ -36,9 +37,9 @@ export function Toast({ toast, onDismiss, duration = 4000 }: ToastProps) {
       }`}
     >
       {isError ? (
-        <span className="material-symbols-outlined" style={{ fontSize: 16 }}>error</span>
+        <Icon name="error" size={16} />
       ) : (
-        <span className="material-symbols-outlined" style={{ fontSize: 16 }}>check_circle</span>
+        <Icon name="check_circle" size={16} />
       )}
       <span>{toast.message}</span>
     </div>

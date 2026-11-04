@@ -4,12 +4,23 @@ import { getAppVersion } from '../services/app.service';
 import { Sidebar } from '../components/Sidebar';
 import { Header } from '../components/Header';
 import { OverviewView } from './views/OverviewView';
-import { GithubSettingsView } from '../modules/github/GithubSettingsView';
+import { SettingsView } from './views/SettingsView';
+import { GithubView } from '../modules/github/GithubView';
 import { DockerView } from '../modules/docker/DockerView';
 import { ServersView } from '../modules/ssh/ServersView';
 import { LogsView } from './views/LogsView';
 import { DocsView } from './views/DocsView';
-import glanceBranding from '../assets/images/glance-branding.png';
+import appIcon from '../assets/images/glance-app-icon.png';
+
+const PAGES: Record<TabId, { title: string; subtitle: string }> = {
+  overview: { title: 'Overview', subtitle: 'Today across GitHub, Docker and your servers' },
+  github: { title: 'GitHub', subtitle: 'Account, activity and connection' },
+  docker: { title: 'Docker', subtitle: 'Local daemon and containers' },
+  servers: { title: 'Servers', subtitle: 'SSH terminal and live metrics' },
+  logs: { title: 'Activity Log', subtitle: 'Agent events from this session' },
+  settings: { title: 'Settings', subtitle: 'Appearance and data sources' },
+  docs: { title: 'Help', subtitle: 'How Glance works' },
+};
 
 interface DashboardLayoutProps {
   cfg: Config;
@@ -33,51 +44,43 @@ export function DashboardLayout({
 
   useEffect(() => { getAppVersion().then(setAppVersion); }, []);
 
+  // ⌘, opens Settings (standard macOS shortcut).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.metaKey && e.key === ',') {
+        e.preventDefault();
+        setTab('settings');
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  const page = PAGES[tab];
+  const configProps = { cfg, onUpdate, onSave, saving, dirty, flash };
+
   return (
-    <div className="flex h-screen overflow-hidden bg-background text-on-surface mac-drag">
+    <div className="flex h-screen overflow-hidden text-on-surface">
       <Sidebar
         appVersion={appVersion}
+        appIcon={appIcon}
         activeTab={tab}
         onTabChange={setTab}
+        username={cfg.github_username}
         onSignOut={onSignOut}
-        brandingImg={glanceBranding}
       />
 
-      <main className="ml-[240px] flex-1 flex flex-col h-screen overflow-hidden relative bg-background">
-        <Header lastSync={data?.updated_at} />
+      <main className="flex-1 min-w-0 flex flex-col h-screen overflow-hidden bg-background">
+        <Header title={page.title} subtitle={page.subtitle} lastSync={data?.updated_at} />
 
-        <section className="flex-1 overflow-y-auto p-xl custom-scrollbar relative">
-          {tab === 'overview' && (
-            <OverviewView cfg={cfg} data={data} onTabChange={setTab} />
-          )}
-
-          {tab === 'github' && (
-            <GithubSettingsView
-              cfg={cfg}
-              onUpdate={onUpdate}
-              onSave={onSave}
-              saving={saving}
-              dirty={dirty}
-              flash={flash}
-              onSignOut={onSignOut}
-            />
-          )}
-
-          {tab === 'docker' && (
-            <DockerView cfg={cfg} data={data} onUpdate={onUpdate} />
-          )}
-
-          {tab === 'servers' && (
-            <ServersView />
-          )}
-
-          {tab === 'logs' && (
-            <LogsView logs={logs} onClearLogs={onClearLogs} />
-          )}
-
-          {tab === 'docs' && (
-            <DocsView />
-          )}
+        <section key={tab} className="flex-1 overflow-y-auto custom-scrollbar px-6 py-6">
+          {tab === 'overview' && <OverviewView cfg={cfg} data={data} onTabChange={setTab} />}
+          {tab === 'github' && <GithubView {...configProps} data={data} onSignOut={onSignOut} />}
+          {tab === 'docker' && <DockerView data={data} socket={cfg.docker_socket} onOpenSettings={() => setTab('settings')} />}
+          {tab === 'servers' && <ServersView />}
+          {tab === 'logs' && <LogsView logs={logs} onClearLogs={onClearLogs} />}
+          {tab === 'settings' && <SettingsView {...configProps} appVersion={appVersion} />}
+          {tab === 'docs' && <DocsView />}
         </section>
       </main>
     </div>

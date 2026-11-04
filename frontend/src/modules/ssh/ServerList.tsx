@@ -1,3 +1,4 @@
+import { Icon } from '../../components/Icon';
 import type { ServerConfig, PingResult } from '../../types';
 
 interface ServerListProps {
@@ -13,7 +14,7 @@ export function ServerList({ servers, pings, selectedID, onSelect, onEdit, onDel
   return (
     <div className="w-72 shrink-0 bg-surface-container border border-outline rounded-xl flex flex-col overflow-hidden">
       <div className="px-md py-sm border-b border-outline flex items-center gap-xs text-primary">
-        <span className="material-symbols-outlined" style={{ fontSize: 18 }}>dns</span>
+        <Icon name="dns" size={18} />
         <span className="text-label-caps font-label-caps uppercase">Servers</span>
         <span className="ml-auto text-[11px] text-on-surface-variant font-code-sm">{servers.length}</span>
       </div>
@@ -34,7 +35,7 @@ export function ServerList({ servers, pings, selectedID, onSelect, onEdit, onDel
                 <div
                   key={s.id}
                   onClick={() => onSelect(s.id)}
-                  className={`group p-sm rounded-lg cursor-pointer transition-all duration-150 border ${isSelected ? 'bg-primary/10 border-primary/30' : 'bg-background border-transparent hover:border-outline hover:bg-white/5'}`}
+                  className={`group p-sm rounded-lg cursor-pointer transition-all duration-150 border ${isSelected ? 'bg-primary/10 border-primary/30' : 'bg-background border-transparent hover:border-outline hover:bg-hover-overlay'}`}
                 >
                   <div className="flex items-start justify-between gap-sm">
                     <div className="min-w-0 flex-1">
@@ -47,7 +48,7 @@ export function ServerList({ servers, pings, selectedID, onSelect, onEdit, onDel
                       </div>
                       <div className="text-[11px] text-on-surface-variant font-code-sm mt-xs truncate ml-sm">{s.username}@{s.ip}:{s.port}</div>
                       {online && (
-                        <div className="text-[10px] mt-xs ml-sm" style={{ color: isHighLatency ? '#FF9500' : '#0A84FF' }}>
+                        <div className={`text-[10px] mt-xs ml-sm ${isHighLatency ? 'text-warning' : 'text-primary'}`}>
                           {ping!.latency.toFixed(0)}ms
                         </div>
                       )}
@@ -58,14 +59,14 @@ export function ServerList({ servers, pings, selectedID, onSelect, onEdit, onDel
                         className="flex items-center justify-center w-6 h-6 rounded text-on-surface-variant hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer"
                         title="Edit"
                       >
-                        <span className="material-symbols-outlined" style={{ fontSize: 14 }}>edit</span>
+                        <Icon name="edit" size={14} />
                       </button>
                       <button
                         onClick={(e) => { e.stopPropagation(); onDelete(s.id); }}
                         className="flex items-center justify-center w-6 h-6 rounded text-on-surface-variant hover:text-error hover:bg-error/10 transition-colors cursor-pointer"
                         title="Delete"
                       >
-                        <span className="material-symbols-outlined" style={{ fontSize: 14 }}>delete_forever</span>
+                        <Icon name="delete_forever" size={14} />
                       </button>
                     </div>
                   </div>

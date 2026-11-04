@@ -2,7 +2,7 @@ import {
   GetServers, SaveServer, DeleteServer, SaveSSHKey,
   ConnectSSH, SSHWrite, SSHResize, DisconnectSSH,
   GetServerMetrics, GetServerPing,
-} from '../../wailsjs/go/main/App';
+} from '../../wailsjs/go/api/ServerService';
 import type { ServerConfig, ServerMetrics, PingResult } from '../types';
 
 export function getServers(): Promise<ServerConfig[]> {

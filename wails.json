@@ -6,7 +6,10 @@
   "frontend:build": "npm run build",
   "frontend:dev:watcher": "npm run dev",
   "frontend:dev:serverUrl": "auto",
-  "version": "1.0.1",
+  "info": {
+    "productName": "Glance",
+    "productVersion": "1.1.0"
+  },
   "author": {
     "name": "veyselaksin",
     "email": "veyselaksn@gmail.com"

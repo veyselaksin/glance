@@ -2,20 +2,50 @@ package main
 
 import (
 	"embed"
+	"encoding/json"
+	"log"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
 	"github.com/wailsapp/wails/v2/pkg/options/mac"
+
+	"dev-stats-widget/api"
+	"dev-stats-widget/internal/config"
+	"dev-stats-widget/internal/secrets"
 )
 
 //go:embed all:frontend/dist
 var assets embed.FS
 
-func main() {
-	app := NewApp()
+//go:embed wails.json
+var wailsConfig []byte
 
-	err := wails.Run(&options.App{
+// version is read from wails.json's info.productVersion, the same field Wails
+// writes into the app bundle, so it only needs to change in one place.
+func version() string {
+	var cfg struct {
+		Info struct {
+			ProductVersion string `json:"productVersion"`
+		} `json:"info"`
+	}
+	if json.Unmarshal(wailsConfig, &cfg) == nil && cfg.Info.ProductVersion != "" {
+		return cfg.Info.ProductVersion
+	}
+	return "dev"
+}
+
+func main() {
+	dir, err := config.DefaultDir()
+	if err != nil {
+		log.Fatalf("data dir: %v", err)
+	}
+	app, err := api.New(dir, version(), secrets.Keychain{})
+	if err != nil {
+		log.Fatalf("init: %v", err)
+	}
+
+	err = wails.Run(&options.App{
 		Title:     "Glance",
 		Width:     1280,
 		Height:    800,
@@ -23,13 +53,10 @@ func main() {
 		MinHeight: 700,
 		// Transparent so the vibrancy material shows through.
 		BackgroundColour: &options.RGBA{R: 0, G: 0, B: 0, A: 0},
-		AssetServer: &assetserver.Options{
-			Assets: assets,
-		},
-		OnStartup: app.startup,
-		Bind: []interface{}{
-			app,
-		},
+		AssetServer:      &assetserver.Options{Assets: assets},
+		OnStartup:        app.Startup,
+		OnShutdown:       app.Shutdown,
+		Bind:             app.Bindings(),
 		Mac: &mac.Options{
 			TitleBar: &mac.TitleBar{
 				// Transparent titlebar; traffic lights float over the webview.
@@ -38,13 +65,12 @@ func main() {
 				FullSizeContent:            true,
 				HideToolbarSeparator:       true,
 			},
-			Appearance:           mac.NSAppearanceNameDarkAqua,
+			// Appearance follows the resolved theme via SystemService.SetAppTheme.
 			WebviewIsTransparent: true,
 			WindowIsTranslucent:  true,
 		},
 	})
-
 	if err != nil {
-		println("Error:", err.Error())
+		log.Fatal(err)
 	}
 }

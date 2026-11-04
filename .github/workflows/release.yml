@@ -18,20 +18,16 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.22"
+          go-version: "1.25"
 
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: "20"
 
-      - name: Install Wails from Source
-        run: |
-          git clone https://github.com/wailsapp/wails.git
-          cd wails/v2/cmd/wails
-          GOWORK=off go install
-          cd ../../../..
-          rm -rf wails
+      - name: Install Wails CLI
+        # Keep in step with github.com/wailsapp/wails/v2 in go.mod.
+        run: go install github.com/wailsapp/wails/v2/cmd/wails@v2.12.0
 
       - name: Install Frontend Dependencies
         run: |
@@ -60,6 +56,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: Glance-macOS.zip
+          generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 

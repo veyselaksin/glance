@@ -1,9 +1,12 @@
+import { Icon } from '../../components/Icon';
 import { useState, useRef, useEffect } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
 import { connectSSH, sshWrite, sshResize, disconnectSSH } from '../../services/ssh.service';
 import { onSshOutput, onSshClosed } from '../../lib/events';
+import { useThemeContext } from '../../hooks/ThemeContext';
+import { getTerminalTheme, getTerminalAccentRgb, getTerminalErrorRgb } from '../../utils/terminalTheme';
 
 interface TerminalPanelProps {
   serverID: string;
@@ -18,37 +21,19 @@ export function TerminalPanel({ serverID, serverName, onDisconnect }: TerminalPa
   const sessionIDRef = useRef<string | null>(null);
   const [connected, setConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { resolved } = useThemeContext();
 
   useEffect(() => {
     if (!containerRef.current) return;
+
+    const accent = getTerminalAccentRgb(resolved);
+    const errRgb = getTerminalErrorRgb();
 
     const term = new Terminal({
       cursorBlink: true,
       fontSize: 13,
       fontFamily: 'JetBrains Mono, SF Mono, Fira Code, monospace',
-      theme: {
-        background: '#000000',
-        foreground: '#e5e5e5',
-        cursor: '#0A84FF',
-        cursorAccent: '#000000',
-        selectionBackground: '#0A84FF55',
-        black: '#000000',
-        red: '#FF453A',
-        green: '#30D158',
-        yellow: '#FF9500',
-        blue: '#0A84FF',
-        magenta: '#BF5AF2',
-        cyan: '#64D2FF',
-        white: '#e5e5e5',
-        brightBlack: '#808080',
-        brightRed: '#FF6961',
-        brightGreen: '#42E680',
-        brightYellow: '#FFB340',
-        brightBlue: '#3D9BFF',
-        brightMagenta: '#D070FF',
-        brightCyan: '#85DCFF',
-        brightWhite: '#ffffff',
-      },
+      theme: getTerminalTheme(resolved),
       allowProposedApi: true,
     });
     const fit = new FitAddon();
@@ -58,17 +43,17 @@ export function TerminalPanel({ serverID, serverName, onDisconnect }: TerminalPa
     termRef.current = term;
     fitRef.current = fit;
 
-    term.writeln(`\x1b[38;2;10;132;255mConnecting to ${serverName}...\x1b[0m`);
+    term.writeln(`\x1b[38;2;${accent}mConnecting to ${serverName}...\x1b[0m`);
 
     connectSSH(serverID).then(sid => {
       sessionIDRef.current = sid;
       setConnected(true);
-      term.writeln(`\x1b[38;2;10;132;255mConnected. Session: ${sid.slice(0, 8)}\x1b[0m\r\n`);
+      term.writeln(`\x1b[38;2;${accent}mConnected. Session: ${sid.slice(0, 8)}\x1b[0m\r\n`);
 
       sshResize(sid, term.cols, term.rows).catch(() => {});
     }).catch(e => {
       setError(String(e));
-      term.writeln(`\x1b[38;2;255;69;58mConnection failed: ${e}\x1b[0m`);
+      term.writeln(`\x1b[38;2;${errRgb}mConnection failed: ${e}\x1b[0m`);
     });
 
     const offOutput = onSshOutput((payload) => {
@@ -79,7 +64,7 @@ export function TerminalPanel({ serverID, serverName, onDisconnect }: TerminalPa
 
     const offClosed = onSshClosed((payload) => {
       if (payload.session_id === sessionIDRef.current) {
-        term.writeln(`\r\n\x1b[38;2;255;69;58m[Session closed: ${payload.reason}]\x1b[0m`);
+        term.writeln(`\r\n\x1b[38;2;${errRgb}m[Session closed: ${payload.reason}]\x1b[0m`);
         setConnected(false);
       }
     });
@@ -98,7 +83,7 @@ export function TerminalPanel({ serverID, serverName, onDisconnect }: TerminalPa
 
     const onResize = () => {
       if (fitRef.current) {
-        try { fitRef.current.fit(); } catch {}
+        try { fitRef.current.fit(); } catch { /* not yet attached */ }
       }
     };
     window.addEventListener('resize', onResize);
@@ -113,8 +98,15 @@ export function TerminalPanel({ serverID, serverName, onDisconnect }: TerminalPa
         disconnectSSH(sessionIDRef.current).catch(() => {});
       }
       term.dispose();
+      termRef.current = null;
     };
   }, [serverID, serverName]);
+
+  useEffect(() => {
+    if (termRef.current) {
+      termRef.current.options.theme = getTerminalTheme(resolved);
+    }
+  }, [resolved]);
 
   const handleDisconnect = () => {
     if (sessionIDRef.current) {
@@ -137,12 +129,12 @@ export function TerminalPanel({ serverID, serverName, onDisconnect }: TerminalPa
           onClick={handleDisconnect}
           className="flex items-center gap-xs px-sm py-xs rounded text-on-surface-variant hover:text-error hover:bg-error/10 transition-colors text-body-sm font-body-sm cursor-pointer"
         >
-          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>power_off</span>
+          <Icon name="power_off" size={16} />
           Disconnect
         </button>
       </div>
 
-      <div ref={containerRef} className="flex-1 bg-black overflow-hidden min-h-0" />
+      <div ref={containerRef} className="flex-1 bg-surface-container-lowest overflow-hidden min-h-0" />
 
       {error && (
         <div className="px-md py-sm text-error text-body-sm bg-error/10 border-t border-error/30">

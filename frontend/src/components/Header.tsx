@@ -1,27 +1,46 @@
+import { useState } from 'react';
 import { fmtTime } from '../utils/format';
+import { refreshNow } from '../services/app.service';
+import { Icon } from './Icon';
 
 interface HeaderProps {
+  title: string;
+  subtitle?: string;
   lastSync: string | undefined;
 }
 
-export function Header({ lastSync }: HeaderProps) {
+/** Unified window toolbar: page title, sync status, refresh, appearance. Draggable. */
+export function Header({ title, subtitle, lastSync }: HeaderProps) {
+  const [refreshing, setRefreshing] = useState(false);
+
+  const refresh = () => {
+    setRefreshing(true);
+    refreshNow().catch(() => {});
+    // The snapshot arrives via the data_updated event; spin briefly for feedback.
+    window.setTimeout(() => setRefreshing(false), 1200);
+  };
+
   return (
-    <header className="min-h-[72px] flex flex-wrap justify-between items-center w-full px-md py-sm bg-background border-b border-outline z-40 mac-drag gap-sm">
-      <div className="flex items-center gap-sm md:gap-md mac-no-drag min-w-0">
-        <h2 className="text-headline-md font-headline-md font-bold text-on-surface tracking-tight truncate">System Console</h2>
-        <div className="hidden md:block h-4 w-px bg-outline shrink-0" />
-        <div className="hidden lg:flex items-center gap-xs px-sm py-xs bg-surface-container rounded border border-outline min-w-0">
-          <span className="material-symbols-outlined text-primary shrink-0" style={{ fontSize: 14 }}>terminal</span>
-          <span className="text-code-sm font-code-sm text-primary truncate">usr/bin/glance-agent --active</span>
-        </div>
+    <header className="toolbar h-[52px] shrink-0 flex items-center justify-between gap-4 px-5 border-b border-outline mac-drag z-30">
+      <div className="min-w-0 flex items-baseline gap-2.5">
+        <h1 className="text-headline-sm text-on-surface truncate">{title}</h1>
+        {subtitle && <span className="hidden lg:inline text-body-sm text-on-surface-variant truncate">{subtitle}</span>}
       </div>
-      <div className="flex items-center gap-sm mac-no-drag shrink-0">
-        <button className="flex items-center gap-xs px-sm py-xs text-on-surface-variant hover:text-on-surface transition-colors rounded cursor-pointer">
-          <span className="material-symbols-outlined" style={{ fontSize: 20 }}>sensors</span>
+
+      <div className="flex items-center gap-2 shrink-0 mac-no-drag">
+        <span className="hidden md:flex items-center gap-1.5 text-body-sm text-on-surface-variant tabular-nums">
+          <span className={`w-1.5 h-1.5 rounded-full ${lastSync ? 'bg-success' : 'bg-on-surface-variant/40'}`} />
+          {lastSync ? `Updated ${fmtTime(lastSync)}` : 'Waiting for data…'}
+        </span>
+        <button
+          onClick={refresh}
+          disabled={refreshing}
+          title="Refresh now"
+          aria-label="Refresh now"
+          className="w-7 h-7 flex items-center justify-center rounded-md text-on-surface-variant hover:text-on-surface hover:bg-hover-overlay cursor-pointer disabled:cursor-default"
+        >
+          <Icon name="refresh" size={15} className={refreshing ? 'animate-spin' : ''} />
         </button>
-        <div className="text-body-sm font-body-sm text-on-surface-variant whitespace-nowrap">
-          Last Sync: {lastSync ? fmtTime(lastSync) : '—'}
-        </div>
       </div>
     </header>
   );
