@@ -36,6 +36,8 @@ export function SSHWrite(arg1:string,arg2:string):Promise<void>;
 
 export function SaveConfig(arg1:main.Config):Promise<void>;
 
+export function SetAppTheme(arg1:string):Promise<void>;
+
 export function SaveSSHKey(arg1:string,arg2:string):Promise<string>;
 
 export function SaveServer(arg1:main.ServerConfig):Promise<string>;

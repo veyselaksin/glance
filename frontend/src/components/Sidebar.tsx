@@ -35,7 +35,7 @@ export function Sidebar({ appVersion, activeTab, onTabChange, onSignOut, brandin
           className={`w-full flex items-center gap-sm px-sm py-sm rounded-lg transition-all duration-150 text-body-sm font-body-sm cursor-pointer text-left ${
             activeTab === 'docs'
               ? 'bg-primary text-on-primary'
-              : 'text-on-surface-variant hover:text-on-surface hover:bg-white/5'
+              : 'text-on-surface-variant hover:text-on-surface hover:bg-hover-overlay'
           }`}
         >
           <span className="material-symbols-outlined" style={{ fontSize: 20 }}>description</span>
@@ -43,7 +43,7 @@ export function Sidebar({ appVersion, activeTab, onTabChange, onSignOut, brandin
         </button>
         <button
           onClick={onSignOut}
-          className="w-full flex items-center gap-sm px-sm py-sm rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-white/5 transition-all duration-150 text-body-sm font-body-sm cursor-pointer text-left"
+          className="w-full flex items-center gap-sm px-sm py-sm rounded-lg text-on-surface-variant hover:text-on-surface hover:bg-hover-overlay transition-all duration-150 text-body-sm font-body-sm cursor-pointer text-left"
         >
           <span className="material-symbols-outlined" style={{ fontSize: 20 }}>logout</span>
           <span>Logout</span>

@@ -139,7 +139,7 @@ export function OverviewView({ cfg, data, onTabChange }: OverviewViewProps) {
             </div>
             <button
               onClick={() => onTabChange('servers')}
-              className="flex items-center gap-xs bg-background border border-outline px-md py-1.5 rounded font-body-sm text-body-sm hover:bg-white/5 transition-colors cursor-pointer"
+              className="flex items-center gap-xs bg-background border border-outline px-md py-1.5 rounded font-body-sm text-body-sm hover:bg-hover-overlay transition-colors cursor-pointer"
             >
               <span className="material-symbols-outlined" style={{ fontSize: 16 }}>add</span>
               Add Node

@@ -67,6 +67,7 @@ type Config struct {
 	ServerHost     string         `json:"server_host"`
 	Servers        []ServerConfig `json:"servers"`
 	DockerSocket   string         `json:"docker_socket"`
+	Theme          string         `json:"theme"` // "dark" | "light" | "system"
 }
 
 // ServerConfig describes a saved SSH-reachable VPS or server.
@@ -294,6 +295,20 @@ func (a *App) GetLastData() AppData {
 // AppVersion returns the application version, mirrored from wails.json.
 func (a *App) AppVersion() string {
 	return AppVersion
+}
+
+// SetAppTheme applies the native macOS window appearance.
+// mode must be "dark" or "light" (resolved value, not "system").
+func (a *App) SetAppTheme(mode string) {
+	if a.ctx == nil {
+		return
+	}
+	switch mode {
+	case "light":
+		runtime.WindowSetLightTheme(a.ctx)
+	default:
+		runtime.WindowSetDarkTheme(a.ctx)
+	}
 }
 
 // StartDeviceFlow initiates GitHub's OAuth Device Flow: requests a device code,

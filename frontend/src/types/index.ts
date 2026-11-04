@@ -9,6 +9,8 @@ export interface ServerConfig {
   private_key_path?: string;
 }
 
+export type ThemeMode = 'dark' | 'light' | 'system';
+
 export interface Config {
   github_username: string;
   github_token: string;
@@ -16,6 +18,7 @@ export interface Config {
   server_host: string;
   servers: ServerConfig[];
   docker_socket: string;
+  theme: ThemeMode;
 }
 
 export interface AppData {

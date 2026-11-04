@@ -62,7 +62,7 @@ const ContainerRow = memo(function ContainerRow({
 
   return (
     <Fragment>
-      <tr className="hover:bg-white/5 transition-colors">
+      <tr className="hover:bg-hover-overlay transition-colors">
         <td className="px-sm lg:px-md py-sm min-w-0">
           <div className="flex items-center gap-sm min-w-0">
             <span className={`w-2 h-2 rounded-full shrink-0 ${running ? 'bg-primary animate-status-pulse' : 'bg-warning'}`} />
@@ -166,7 +166,7 @@ const ContainerRow = memo(function ContainerRow({
       </tr>
       {isExpanded && (
         <tr>
-          <td colSpan={11} className="px-sm lg:px-md py-sm bg-black/50 border-t border-outline/50">
+          <td colSpan={11} className="px-sm lg:px-md py-sm log-surface border-t border-outline/50">
             <div className="rounded-lg border border-outline/60 overflow-hidden">
               <div className="flex items-center justify-between px-sm py-xs bg-surface-container-high border-b border-outline">
                 <div className="flex items-center gap-xs text-primary">
@@ -177,7 +177,7 @@ const ContainerRow = memo(function ContainerRow({
               </div>
               <div
                 ref={logRef}
-                className="p-md max-h-96 overflow-y-auto custom-scrollbar bg-black/60 font-mono text-code-sm text-on-surface-variant whitespace-pre-wrap break-all leading-relaxed select-text"
+                className="p-md max-h-96 overflow-y-auto custom-scrollbar log-surface font-mono text-code-sm text-on-surface-variant whitespace-pre-wrap break-all leading-relaxed select-text"
               >
                 {logsLoading ? (
                   <span className="text-primary/70">Fetching logs\u2026</span>

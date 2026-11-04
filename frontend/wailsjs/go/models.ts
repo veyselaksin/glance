@@ -125,6 +125,7 @@ export namespace main {
 	    server_host: string;
 	    servers: ServerConfig[];
 	    docker_socket: string;
+	    theme: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new Config(source);
@@ -138,6 +139,7 @@ export namespace main {
 	        this.server_host = source["server_host"];
 	        this.servers = this.convertValues(source["servers"], ServerConfig);
 	        this.docker_socket = source["docker_socket"];
+	        this.theme = source["theme"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

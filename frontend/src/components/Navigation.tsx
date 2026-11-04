@@ -22,7 +22,7 @@ export function Navigation({ items, active, onSelect }: NavigationProps) {
           className={`w-full flex items-center gap-sm px-sm py-sm rounded-lg transition-all duration-150 text-body-sm font-body-sm cursor-pointer text-left ${
             active === item.id
               ? 'bg-primary text-on-primary'
-              : 'text-on-surface-variant hover:text-on-surface hover:bg-white/5'
+              : 'text-on-surface-variant hover:text-on-surface hover:bg-hover-overlay'
           }`}
         >
           <span className="material-symbols-outlined" style={{ fontSize: 20 }}>{item.icon}</span>

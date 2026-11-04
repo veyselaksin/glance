@@ -1,9 +1,11 @@
 import { useEffect } from 'react';
-import { getConfig } from '../services/config.service';
+import { getConfig, saveConfig } from '../services/config.service';
 import { useAppData } from '../hooks/useAppData';
 import { useLogs } from '../hooks/useLogs';
 import { useConfig } from '../hooks/useConfig';
 import { useGithubAuth } from '../hooks/useGithubAuth';
+import { useTheme } from '../hooks/useTheme';
+import { ThemeContext } from '../hooks/ThemeContext';
 import {
   onOauthSuccess,
   onOauthError,
@@ -12,6 +14,7 @@ import {
 } from '../lib/events';
 import { SignInPage } from '../modules/github/SignInPage';
 import { DashboardLayout } from './DashboardLayout';
+import type { ThemeMode } from '../types';
 import '../App.css';
 
 export default function App() {
@@ -23,8 +26,10 @@ export default function App() {
     server_host: '',
     servers: [],
     docker_socket: '/var/run/docker.sock',
+    theme: 'system',
   });
   const data = useAppData();
+  const theme = useTheme(cfg.theme);
   const {
     isSigningIn, deviceCode,
     setDeviceCode, resetAuth,
@@ -32,7 +37,14 @@ export default function App() {
   } = useGithubAuth(setCfg, pushLog);
 
   useEffect(() => {
-    getConfig().then(setCfg);
+    getConfig().then((c) => {
+      setCfg({
+        ...c,
+        theme: (c.theme === 'dark' || c.theme === 'light' || c.theme === 'system'
+          ? c.theme
+          : 'system') as ThemeMode,
+      });
+    });
   }, [setCfg]);
 
   useEffect(() => {
@@ -64,29 +76,46 @@ export default function App() {
     };
   }, [pushLog, resetAuth, setCfg, setDeviceCode]);
 
+  const themeValue = {
+    mode: theme.mode,
+    resolved: theme.resolved,
+    setPreference: (next: ThemeMode) => {
+      theme.setPreference(next);
+      setCfg(prev => {
+        const updated = { ...prev, theme: next };
+        saveConfig(updated).catch(() => {});
+        return updated;
+      });
+    },
+  };
+
   if (!cfg.github_token) {
     return (
-      <SignInPage
-        onSignIn={handleSignIn}
-        isSigningIn={isSigningIn}
-        userCode={deviceCode?.user_code}
-        verificationUri={deviceCode?.verification_uri}
-      />
+      <ThemeContext.Provider value={themeValue}>
+        <SignInPage
+          onSignIn={handleSignIn}
+          isSigningIn={isSigningIn}
+          userCode={deviceCode?.user_code}
+          verificationUri={deviceCode?.verification_uri}
+        />
+      </ThemeContext.Provider>
     );
   }
 
   return (
-    <DashboardLayout
-      cfg={cfg}
-      data={data}
-      onUpdate={update}
-      onSave={save}
-      saving={saving}
-      dirty={dirty}
-      flash={flash}
-      onSignOut={handleSignOut}
-      logs={logs}
-      onClearLogs={clearLogs}
-    />
+    <ThemeContext.Provider value={themeValue}>
+      <DashboardLayout
+        cfg={cfg}
+        data={data}
+        onUpdate={update}
+        onSave={save}
+        saving={saving}
+        dirty={dirty}
+        flash={flash}
+        onSignOut={handleSignOut}
+        logs={logs}
+        onClearLogs={clearLogs}
+      />
+    </ThemeContext.Provider>
   );
 }

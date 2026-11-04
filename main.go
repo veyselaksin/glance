@@ -38,7 +38,7 @@ func main() {
 				FullSizeContent:            true,
 				HideToolbarSeparator:       true,
 			},
-			Appearance:           mac.NSAppearanceNameDarkAqua,
+			// Appearance follows the resolved theme via App.SetAppTheme.
 			WebviewIsTransparent: true,
 			WindowIsTranslucent:  true,
 		},

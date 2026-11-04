@@ -1,4 +1,5 @@
-import type { Config } from '../../types';
+import type { Config, ThemeMode } from '../../types';
+import { useThemeContext } from '../../hooks/ThemeContext';
 
 interface GithubSettingsViewProps {
   cfg: Config;
@@ -10,12 +11,49 @@ interface GithubSettingsViewProps {
   onSignOut: () => void;
 }
 
+const THEME_OPTIONS: { id: ThemeMode; label: string; icon: string }[] = [
+  { id: 'dark', label: 'Dark', icon: 'dark_mode' },
+  { id: 'light', label: 'Light', icon: 'light_mode' },
+  { id: 'system', label: 'System', icon: 'contrast' },
+];
+
 export function GithubSettingsView({ cfg, onUpdate, onSave, saving, dirty, flash, onSignOut }: GithubSettingsViewProps) {
+  const { mode, setPreference } = useThemeContext();
+
+  const handleTheme = (next: ThemeMode) => {
+    setPreference(next);
+  };
+
   return (
     <div className="max-w-2xl mx-auto animate-page-in space-y-xl">
       <div className="mb-md">
         <h3 className="text-headline-lg font-headline-lg text-on-surface mb-xs">GitHub Settings</h3>
         <p className="text-on-surface-variant font-body-md">Manage your GitHub connection.</p>
+      </div>
+
+      <div className="bg-surface-container border border-outline rounded-xl p-md">
+        <div className="flex items-center gap-xs text-primary mb-1">
+          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>palette</span>
+          <span className="text-label-caps font-label-caps uppercase">Appearance</span>
+        </div>
+        <h4 className="text-headline-sm font-headline-sm text-on-surface mb-md">Theme</h4>
+        <div className="flex flex-wrap gap-sm">
+          {THEME_OPTIONS.map(opt => (
+            <button
+              key={opt.id}
+              type="button"
+              onClick={() => handleTheme(opt.id)}
+              className={`flex items-center gap-xs px-md py-xs rounded text-body-sm font-body-sm transition-colors cursor-pointer ${
+                mode === opt.id
+                  ? 'bg-primary text-on-primary'
+                  : 'bg-background border border-outline text-on-surface-variant hover:text-on-surface'
+              }`}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 16 }}>{opt.icon}</span>
+              {opt.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="bg-surface-container border border-outline rounded-xl p-md">

@@ -175,7 +175,7 @@ export function ServerForm({ onSaved, onCancel, editing }: ServerFormProps) {
       )}
 
       <div className="flex justify-end gap-sm pt-sm">
-        <button onClick={onCancel} className="px-md py-xs rounded text-body-sm font-body-sm text-on-surface-variant hover:text-on-surface hover:bg-white/5 transition-colors cursor-pointer">
+        <button onClick={onCancel} className="px-md py-xs rounded text-body-sm font-body-sm text-on-surface-variant hover:text-on-surface hover:bg-hover-overlay transition-colors cursor-pointer">
           Cancel
         </button>
         <button

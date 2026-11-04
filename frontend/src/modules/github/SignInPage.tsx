@@ -59,7 +59,7 @@ export function SignInPage({ onSignIn, isSigningIn, userCode, verificationUri }:
               </div>
 
               <div className="flex items-center justify-center gap-sm py-md">
-                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin shrink-0" />
+                <span className="w-4 h-4 border-2 border-outline border-t-primary rounded-full animate-spin shrink-0" />
                 <span className="text-on-surface">Waiting for authorization…</span>
               </div>
 
@@ -86,7 +86,7 @@ export function SignInPage({ onSignIn, isSigningIn, userCode, verificationUri }:
 
           {/* Footer */}
           <div className="mt-lg flex flex-col gap-sm">
-            <div className="h-px w-full bg-white/10" />
+            <div className="h-px w-full bg-divider" />
             <div className="flex items-center justify-between mt-sm">
               <span className="text-code-sm font-code-sm text-on-surface-variant/70 flex items-center gap-xs">
                 <span className="material-symbols-outlined" style={{ fontSize: 14 }}>lock</span>
@@ -103,7 +103,7 @@ export function SignInPage({ onSignIn, isSigningIn, userCode, verificationUri }:
             <div className="w-1.5 h-1.5 rounded-full bg-primary/60" />
             v{appVersion || '1.0.0'} - Agent Running
           </div>
-          <div className="w-px h-3 bg-white/10" />
+          <div className="w-px h-3 bg-divider" />
           <span>Build 2409-F</span>
         </div>
       </main>

@@ -6,6 +6,87 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ─── Theme tokens (dark default = existing Glance brand) ────────────────── */
+:root,
+[data-theme="dark"] {
+  --background:                #121212;
+  --surface:                   #121212;
+  --surface-dim:               #131313;
+  --surface-container-lowest:  #0e0e0e;
+  --surface-container-low:     #1E1E1E;
+  --surface-container:         #2C2C2E;
+  --surface-container-high:    #3A3A3C;
+  --surface-container-highest: #48484A;
+  --surface-bright:            #393939;
+  --surface-variant:           #353535;
+  --on-surface:                #FFFFFF;
+  --on-surface-variant:        #AEAEB2;
+  --on-background:             #e5e2e1;
+  --primary:                   #0A84FF;
+  --on-primary:                #FFFFFF;
+  --primary-container:         #0A84FF;
+  --secondary:                 #8E8E93;
+  --secondary-container:       #474649;
+  --tertiary:                  #FF9500;
+  --warning:                   #FF9500;
+  --error:                     #FF453A;
+  --success:                   #30D158;
+  --purple:                    #BF5AF2;
+  --cyan:                      #64D2FF;
+  --outline:                   #3A3A3C;
+  --outline-variant:           #48484A;
+  --glass-bg:                  rgba(30, 30, 30, 0.8);
+  --sidebar-bg:                rgba(30, 30, 30, 0.75);
+  --log-bg:                    rgba(0, 0, 0, 0.4);
+  --hover-overlay:             rgba(255, 255, 255, 0.05);
+  --divider:                   rgba(255, 255, 255, 0.1);
+  --login-glow-1:              rgba(0, 122, 255, 0.1);
+  --login-glow-2:              rgba(0, 122, 255, 0.05);
+  --scrollbar-thumb:           rgba(255, 255, 255, 0.1);
+  --scrollbar-thumb-hover:     rgba(255, 255, 255, 0.2);
+  --muted-fg:                  rgba(255, 255, 255, 0.2);
+  --input-placeholder:         rgba(174, 174, 178, 0.5);
+}
+
+[data-theme="light"] {
+  --background:                #F5F5F7;
+  --surface:                   #F5F5F7;
+  --surface-dim:               #EBEBED;
+  --surface-container-lowest:  #FFFFFF;
+  --surface-container-low:     #F0F0F2;
+  --surface-container:         #E8E8ED;
+  --surface-container-high:    #DCDCE0;
+  --surface-container-highest: #D1D1D6;
+  --surface-bright:            #FFFFFF;
+  --surface-variant:           #E5E5EA;
+  --on-surface:                #1C1C1E;
+  --on-surface-variant:        #6E6E73;
+  --on-background:             #1C1C1E;
+  --primary:                   #007AFF;
+  --on-primary:                #FFFFFF;
+  --primary-container:         #007AFF;
+  --secondary:                 #8E8E93;
+  --secondary-container:       #E5E5EA;
+  --tertiary:                  #FF9500;
+  --warning:                   #FF9500;
+  --error:                     #FF3B30;
+  --success:                   #34C759;
+  --purple:                    #AF52DE;
+  --cyan:                      #32ADE6;
+  --outline:                   #D1D1D6;
+  --outline-variant:           #E5E5EA;
+  --glass-bg:                  rgba(255, 255, 255, 0.72);
+  --sidebar-bg:                rgba(246, 246, 248, 0.78);
+  --log-bg:                    rgba(0, 0, 0, 0.04);
+  --hover-overlay:             rgba(0, 0, 0, 0.04);
+  --divider:                   rgba(0, 0, 0, 0.08);
+  --login-glow-1:              rgba(0, 122, 255, 0.12);
+  --login-glow-2:              rgba(0, 122, 255, 0.06);
+  --scrollbar-thumb:           rgba(0, 0, 0, 0.15);
+  --scrollbar-thumb-hover:     rgba(0, 0, 0, 0.28);
+  --muted-fg:                  rgba(28, 28, 30, 0.35);
+  --input-placeholder:         rgba(110, 110, 115, 0.55);
+}
 
 /* ─── Reset ──────────────────────────────────────────────────────────────── */
 *, *::before, *::after {
@@ -21,12 +102,12 @@ html, body {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background: #121212;
+  background: var(--background);
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-  color: #FFFFFF;
+  color: var(--on-surface);
 }
 
 #root {
@@ -61,22 +142,22 @@ html, body {
 
 /* ─── Glass Panel (Apple vibrancy effect) ────────────────────────────────── */
 .glass-panel {
-  background: rgba(30, 30, 30, 0.8);
+  background: var(--glass-bg);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
 }
 
 /* ─── Apple Sidebar (semi-transparent with blur) ────────────────────────── */
 .apple-sidebar {
-  background: rgba(30, 30, 30, 0.75);
+  background: var(--sidebar-bg);
   backdrop-filter: blur(30px);
   -webkit-backdrop-filter: blur(30px);
 }
 
 /* ─── Primary gradient button ────────────────────────────────────────────── */
 .primary-gradient-btn {
-  background: linear-gradient(180deg, #007AFF 0%, #0056B3 100%);
-  box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
+  background: linear-gradient(180deg, var(--primary) 0%, color-mix(in srgb, var(--primary) 70%, #000) 100%);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--primary) 30%, transparent);
   transition: filter 0.15s, transform 0.1s;
 }
 .primary-gradient-btn:hover  { filter: brightness(1.1); }
@@ -89,24 +170,24 @@ html, body {
   width: 100%;
   padding: 6px 10px;
   border-radius: 6px;
-  border: 1px solid #3A3A3C;
-  background: #121212;
-  color: #FFFFFF;
+  border: 1px solid var(--outline);
+  background: var(--background);
+  color: var(--on-surface);
   font-family: 'JetBrains Mono', monospace;
   font-size: 13px;
   outline: none;
   transition: border-color 0.15s;
   height: 34px;
 }
-.mac-input::placeholder { color: rgba(174, 174, 178, 0.5); }
-.mac-input:focus         { border-color: #0A84FF; }
+.mac-input::placeholder { color: var(--input-placeholder); }
+.mac-input:focus         { border-color: var(--primary); }
 .mac-input:disabled      { opacity: 0.5; cursor: not-allowed; }
 
 /* ─── Scrollbars ─────────────────────────────────────────────────────────── */
 .custom-scrollbar::-webkit-scrollbar        { width: 4px; }
 .custom-scrollbar::-webkit-scrollbar-track  { background: transparent; }
-.custom-scrollbar::-webkit-scrollbar-thumb  { background: rgba(255,255,255,0.1); border-radius: 2px; }
-.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+.custom-scrollbar::-webkit-scrollbar-thumb  { background: var(--scrollbar-thumb); border-radius: 2px; }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); }
 
 /* ─── Animations ─────────────────────────────────────────────────────────── */
 @keyframes pulse-blue {
@@ -127,8 +208,18 @@ html, body {
 .animate-page-in { animation: fade-in 0.25s ease-out; }
 
 /* ─── Login page glow effect ─────────────────────────────────────────────── */
-.login-glow-1 { background: rgba(0, 122, 255, 0.1); }
-.login-glow-2 { background: rgba(0, 122, 255, 0.05); }
+.login-glow-1 { background: var(--login-glow-1); }
+.login-glow-2 { background: var(--login-glow-2); }
+
+/* ─── Log / console backgrounds ──────────────────────────────────────────── */
+.log-surface {
+  background: var(--log-bg);
+}
+
+/* ─── Hover overlay utility ──────────────────────────────────────────────── */
+.hover-overlay:hover {
+  background: var(--hover-overlay);
+}
 
 /* ─── Table styles ───────────────────────────────────────────────────────── */
 table { border-collapse: collapse; }

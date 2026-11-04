@@ -34,7 +34,7 @@ export function ServerList({ servers, pings, selectedID, onSelect, onEdit, onDel
                 <div
                   key={s.id}
                   onClick={() => onSelect(s.id)}
-                  className={`group p-sm rounded-lg cursor-pointer transition-all duration-150 border ${isSelected ? 'bg-primary/10 border-primary/30' : 'bg-background border-transparent hover:border-outline hover:bg-white/5'}`}
+                  className={`group p-sm rounded-lg cursor-pointer transition-all duration-150 border ${isSelected ? 'bg-primary/10 border-primary/30' : 'bg-background border-transparent hover:border-outline hover:bg-hover-overlay'}`}
                 >
                   <div className="flex items-start justify-between gap-sm">
                     <div className="min-w-0 flex-1">
@@ -47,7 +47,7 @@ export function ServerList({ servers, pings, selectedID, onSelect, onEdit, onDel
                       </div>
                       <div className="text-[11px] text-on-surface-variant font-code-sm mt-xs truncate ml-sm">{s.username}@{s.ip}:{s.port}</div>
                       {online && (
-                        <div className="text-[10px] mt-xs ml-sm" style={{ color: isHighLatency ? '#FF9500' : '#0A84FF' }}>
+                        <div className={`text-[10px] mt-xs ml-sm ${isHighLatency ? 'text-warning' : 'text-primary'}`}>
                           {ping!.latency.toFixed(0)}ms
                         </div>
                       )}

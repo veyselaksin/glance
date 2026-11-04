@@ -67,7 +67,7 @@ export function ServerMetricsPanel({ server, metrics, ping, metricsLoading, fetc
                 value={`${metrics.cpu_usage.toFixed(1)}%`}
                 sub={metrics.load_avg ? `Load: ${metrics.load_avg}` : undefined}
                 pctVal={metrics.cpu_usage}
-                color="#0A84FF"
+                tone="primary"
               />
               <MetricCard
                 icon="memory_alt"
@@ -75,7 +75,7 @@ export function ServerMetricsPanel({ server, metrics, ping, metricsLoading, fetc
                 value={formatBytes(metrics.mem_used)}
                 sub={`of ${formatBytes(metrics.mem_total)}`}
                 pctVal={pct(metrics.mem_used, metrics.mem_total)}
-                color="#30D158"
+                tone="success"
               />
               <MetricCard
                 icon="storage"
@@ -83,14 +83,14 @@ export function ServerMetricsPanel({ server, metrics, ping, metricsLoading, fetc
                 value={formatBytes(metrics.disk_used)}
                 sub={`of ${formatBytes(metrics.disk_total)}`}
                 pctVal={pct(metrics.disk_used, metrics.disk_total)}
-                color="#FF9500"
+                tone="warning"
               />
               <MetricCard
                 icon="schedule"
                 label="Uptime"
                 value={formatUptime(metrics.uptime)}
                 sub={metrics.load_avg ? `Load avg: ${metrics.load_avg}` : undefined}
-                color="#BF5AF2"
+                tone="purple"
               />
             </div>
 

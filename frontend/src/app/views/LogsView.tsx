@@ -30,16 +30,16 @@ export function LogsView({ logs, onClearLogs }: LogsViewProps) {
             Clear
           </button>
         </div>
-        <div ref={logRef} className="flex-1 p-md text-code-sm font-code-sm text-on-surface-variant custom-scrollbar overflow-y-auto space-y-1 bg-black/40 select-text">
+        <div ref={logRef} className="flex-1 p-md text-code-sm font-code-sm text-on-surface-variant custom-scrollbar overflow-y-auto space-y-1 log-surface select-text">
           {logs.map((log, i) => (
             <div key={i} className="flex gap-2">
-              <span className="text-white/20 select-none shrink-0">{log.time}</span>
+              <span className="text-muted-fg select-none shrink-0">{log.time}</span>
               <span className={log.color}>[{log.tag}]</span>
               <span className="text-on-surface">{log.msg}</span>
             </div>
           ))}
           <div className="flex gap-2 items-center">
-            <span className="text-white/20 select-none">{now()}</span>
+            <span className="text-muted-fg select-none">{now()}</span>
             <span className="text-primary/70">[LOG]</span>
             <span className="w-2 h-4 bg-primary/40 cursor-blink ml-1 inline-block" />
           </div>
