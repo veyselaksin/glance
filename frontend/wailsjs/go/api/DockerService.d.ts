@@ -4,11 +4,15 @@ import {docker} from '../models';
 
 export function DeleteContainer(arg1:string):Promise<void>;
 
+export function DockerRuntime():Promise<string>;
+
 export function GetContainers():Promise<Array<docker.Container>>;
 
 export function RestartContainer(arg1:string):Promise<void>;
 
 export function StartContainer(arg1:string):Promise<void>;
+
+export function StartDaemon():Promise<string>;
 
 export function StopContainer(arg1:string):Promise<void>;
 

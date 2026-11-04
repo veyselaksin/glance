@@ -20,8 +20,9 @@ import (
 // Two independent sources are used:
 //  1. GraphQL contributionCalendar → "contributions" (GitHub's graph number,
 //     which can lag by minutes to hours).
-//  2. REST /user/repos + /repos/{repo}/commits → "commits" pushed today
-//     (immediate, includes private repos with the `repo` scope).
+//  2. REST /user/repos + /repos/{repo}/commits → the user's commits pushed
+//     today on any branch (immediate, includes private repos with the `repo`
+//     scope).
 //
 // Without a token, or if the token is rejected, the public contributions page
 // is scraped instead and commits are reported as 0.
@@ -34,7 +35,7 @@ func (c *Client) Stats(ctx context.Context, username, token string) Stats {
 	}
 
 	contributions, errC := c.contributionsToday(ctx, username, token)
-	commits, errM := c.commitsToday(ctx, token)
+	commits, errM := c.commitsToday(ctx, username, token)
 	var unauth errUnauthorized
 	if errors.As(errC, &unauth) || errors.As(errM, &unauth) {
 		slog.Warn("github: token unauthorized, falling back to scraper")
@@ -47,7 +48,11 @@ func (c *Client) Stats(ctx context.Context, username, token string) Stats {
 		slog.Warn("github: commits", "err", errM)
 	}
 	slog.Debug("github: stats", "user", username, "contributions", contributions, "commits", commits)
-	return Stats{Username: username, Contributions: contributions, Commits: commits}
+	st := Stats{Username: username, Contributions: contributions, Commits: commits}
+	if errors.Is(errM, errNoRepoAccess) {
+		st.Warning = WarnNoRepoAccess
+	}
+	return st
 }
 
 // Day is one entry in the contribution calendar.
@@ -152,36 +157,20 @@ func startOfToday(now time.Time) time.Time {
 	return time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, now.Location())
 }
 
-// commitsToday counts commits pushed since local midnight across the user's
-// 20 most recently pushed owned repos.
-func (c *Client) commitsToday(ctx context.Context, token string) (int, error) {
-	since := startOfToday(c.Now()).UTC()
-	req, err := c.newRequest(ctx, http.MethodGet,
-		c.APIBase+"/user/repos?sort=pushed&per_page=20&affiliation=owner", token, nil)
-	if err != nil {
-		return 0, err
-	}
-	var repos []Repo
-	if err := c.doJSON(req, &repos); err != nil {
-		return 0, err
-	}
-
-	total := 0
-	for _, name := range PushedSince(repos, since) {
-		n, err := c.countRepoCommits(ctx, token, name, since)
-		if err != nil {
-			slog.Warn("github: repo commits", "repo", name, "err", err)
-			continue
-		}
-		total += n
-	}
-	return total, nil
+// commitsToday counts the user's distinct commits pushed since local midnight
+// on any branch. See collectCommits.
+func (c *Client) commitsToday(ctx context.Context, username, token string) (int, error) {
+	commits, _, err := c.collectCommits(ctx, username, token, startOfToday(c.Now()))
+	return len(commits), err
 }
+
+var errNoRepoAccess = errors.New("token can list no repositories")
 
 // Repo is the subset of /user/repos used here.
 type Repo struct {
-	FullName string `json:"full_name"`
-	PushedAt string `json:"pushed_at"`
+	FullName      string `json:"full_name"`
+	PushedAt      string `json:"pushed_at"`
+	DefaultBranch string `json:"default_branch"`
 }
 
 // PushedSince returns the names of repos pushed at or after since.
@@ -199,28 +188,14 @@ func PushedSince(repos []Repo, since time.Time) []string {
 	return out
 }
 
-func (c *Client) countRepoCommits(ctx context.Context, token, repo string, since time.Time) (int, error) {
-	u := fmt.Sprintf("%s/repos/%s/commits?since=%s&per_page=100",
-		c.APIBase, repo, url.QueryEscape(since.Format(time.RFC3339)))
-	req, err := c.newRequest(ctx, http.MethodGet, u, token, nil)
-	if err != nil {
-		return 0, err
-	}
-	var commits []struct {
-		SHA string `json:"sha"`
-	}
-	if err := c.doJSON(req, &commits); err != nil {
-		return 0, err
-	}
-	return len(commits), nil
-}
-
 // scrape reads today's count from the public contributions page.
 func (c *Client) scrape(ctx context.Context, username string) Stats {
 	req, err := c.newRequest(ctx, http.MethodGet, c.WebBase+"/users/"+url.PathEscape(username)+"/contributions", "", nil)
 	if err != nil {
 		return Stats{Username: username, Error: err.Error()}
 	}
+	// This endpoint serves HTML; GitHub answers 406 to Accept: application/json.
+	req.Header.Set("Accept", "text/html")
 	resp, err := c.HTTP.Do(req)
 	if err != nil {
 		return Stats{Username: username, Error: err.Error()}

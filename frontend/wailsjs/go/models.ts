@@ -116,11 +116,92 @@ export namespace docker {
 
 export namespace github {
 	
+	export class Commit {
+	    sha: string;
+	    message: string;
+	    repo: string;
+	    branch: string;
+	    url: string;
+	    date: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Commit(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.sha = source["sha"];
+	        this.message = source["message"];
+	        this.repo = source["repo"];
+	        this.branch = source["branch"];
+	        this.url = source["url"];
+	        this.date = source["date"];
+	    }
+	}
+	export class RepoActivity {
+	    repo: string;
+	    url: string;
+	    commits: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new RepoActivity(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.repo = source["repo"];
+	        this.url = source["url"];
+	        this.commits = source["commits"];
+	    }
+	}
+	export class Activity {
+	    days: number;
+	    since: string;
+	    total: number;
+	    repos: RepoActivity[];
+	    commits: Commit[];
+	    partial: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new Activity(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.days = source["days"];
+	        this.since = source["since"];
+	        this.total = source["total"];
+	        this.repos = this.convertValues(source["repos"], RepoActivity);
+	        this.commits = this.convertValues(source["commits"], Commit);
+	        this.partial = source["partial"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	
+	
 	export class Stats {
 	    username: string;
 	    contributions: number;
 	    commits: number;
 	    error?: string;
+	    warning?: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new Stats(source);
@@ -132,6 +213,7 @@ export namespace github {
 	        this.contributions = source["contributions"];
 	        this.commits = source["commits"];
 	        this.error = source["error"];
+	        this.warning = source["warning"];
 	    }
 	}
 

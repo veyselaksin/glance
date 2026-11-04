@@ -15,7 +15,7 @@ import (
 // The Client ID is a PUBLIC identifier, not a secret, and is safe to embed in
 // an open-source binary. The Device Flow does not use a client secret. Forks
 // can change this constant or override it per user in Settings → Advanced.
-const DefaultClientID = "Iv23liUdlgD2PfwfmoAO"
+const DefaultClientID = "Ov23liVNutIp7uReJTyq"
 
 const userAgent = "Glance/1.0"
 
@@ -43,12 +43,18 @@ type Stats struct {
 	Contributions int    `json:"contributions"`
 	Commits       int    `json:"commits"`
 	Error         string `json:"error,omitempty"`
+	// Warning is a non-fatal problem: the counts are shown but may be incomplete.
+	Warning string `json:"warning,omitempty"`
 }
 
 // errUnauthorized marks a 401 so Stats can fall back to the public scraper.
 type errUnauthorized struct{}
 
 func (errUnauthorized) Error() string { return "unauthorized" }
+
+// WarnNoRepoAccess is reported when the token can list no repositories, which
+// is what a GitHub App token looks like when the app is not installed.
+const WarnNoRepoAccess = "This token can't see any of your repositories, so commits can't be counted. Sign in with an OAuth App that has the repo scope."
 
 func (c *Client) newRequest(ctx context.Context, method, url, token string, body io.Reader) (*http.Request, error) {
 	req, err := http.NewRequestWithContext(ctx, method, url, body)

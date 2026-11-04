@@ -1,3 +1,4 @@
+import { Icon } from '../../components/Icon';
 import { useState } from 'react';
 import type { ServerConfig } from '../../types';
 import { saveServer, saveSSHKey } from '../../services/ssh.service';
@@ -64,7 +65,7 @@ export function ServerForm({ onSaved, onCancel, editing }: ServerFormProps) {
   return (
     <div className="bg-surface-container border border-outline rounded-xl p-md space-y-md animate-fade-in">
       <div className="flex items-center gap-xs text-primary">
-        <span className="material-symbols-outlined" style={{ fontSize: 18 }}>dns</span>
+        <Icon name="dns" size={18} />
         <span className="text-label-caps font-label-caps uppercase">{editing ? 'Edit Server' : 'Add Server'}</span>
       </div>
 
@@ -99,14 +100,14 @@ export function ServerForm({ onSaved, onCancel, editing }: ServerFormProps) {
             onClick={() => setAuthMethod('password')}
             className={`flex items-center gap-xs px-md py-xs rounded text-body-sm font-body-sm transition-colors cursor-pointer ${authMethod === 'password' ? 'bg-primary text-on-primary' : 'bg-background border border-outline text-on-surface-variant hover:text-on-surface'}`}
           >
-            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>key</span>
+            <Icon name="key" size={16} />
             Password
           </button>
           <button
             onClick={() => setAuthMethod('private_key')}
             className={`flex items-center gap-xs px-md py-xs rounded text-body-sm font-body-sm transition-colors cursor-pointer ${authMethod === 'private_key' ? 'bg-primary text-on-primary' : 'bg-background border border-outline text-on-surface-variant hover:text-on-surface'}`}
           >
-            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>vpn_key</span>
+            <Icon name="vpn_key" size={16} />
             SSH Private Key
           </button>
         </div>
@@ -152,12 +153,12 @@ export function ServerForm({ onSaved, onCancel, editing }: ServerFormProps) {
                 autoComplete="off"
               />
               <div className="flex items-center gap-xs text-[11px] text-on-surface-variant/60">
-                <span className="material-symbols-outlined" style={{ fontSize: 12 }}>lock</span>
+                <Icon name="lock" size={12} />
                 <span>Key is stored at <code className="text-primary font-mono">~/.glance/ssh_keys/</code> with 0600 permissions. Never written to config.json.</span>
               </div>
               {editing?.private_key_path && !privateKeyContent && (
                 <div className="flex items-center gap-xs text-[11px] text-warning">
-                  <span className="material-symbols-outlined" style={{ fontSize: 12 }}>info</span>
+                  <Icon name="info" size={12} />
                   <span>A key is already saved. Paste a new key to replace it, or switch to "File Path" mode.</span>
                 </div>
               )}

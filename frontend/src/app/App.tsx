@@ -15,7 +15,6 @@ import {
 import { SignInPage } from '../modules/github/SignInPage';
 import { DashboardLayout } from './DashboardLayout';
 import type { ThemeMode } from '../types';
-import '../App.css';
 
 export default function App() {
   const { logs, pushLog, clearLogs } = useLogs();

@@ -66,3 +66,26 @@ func TestSetSocketDefault(t *testing.T) {
 		t.Fatalf("socket = %q", c.socket)
 	}
 }
+
+func TestDetectRuntime(t *testing.T) {
+	orig := fileExists
+	t.Cleanup(func() { fileExists = orig })
+
+	present := map[string]bool{}
+	fileExists = func(p string) bool { return present[p] }
+
+	if _, err := DetectRuntime(); err != ErrNoRuntime {
+		t.Fatalf("expected ErrNoRuntime, got %v", err)
+	}
+
+	present["/opt/homebrew/bin/colima"] = true
+	if rt, _ := DetectRuntime(); rt.Name != "Colima" || rt.Cmd[1] != "start" {
+		t.Fatalf("got %+v", rt)
+	}
+
+	present["/Applications/Docker.app"] = true
+	rt, err := DetectRuntime()
+	if err != nil || rt.Name != "Docker Desktop" || rt.Cmd[0] != "open" || rt.Cmd[2] != "/Applications/Docker.app" {
+		t.Fatalf("got %+v, %v", rt, err)
+	}
+}

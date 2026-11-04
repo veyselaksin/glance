@@ -1,91 +1,101 @@
-/* ─── Fonts — must be first ──────────────────────────────────────────────── */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap');
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* ─── Theme tokens (dark default = existing Glance brand) ────────────────── */
+/* ─── Theme tokens ────────────────────────────────────────────────────────────
+   Colors are stored as space-separated RGB channels so Tailwind's opacity
+   modifiers work (bg-primary/10 → rgb(var(--primary) / 0.1)).
+   Palettes follow macOS semantic colors (System Settings / Activity Monitor).
+   ──────────────────────────────────────────────────────────────────────────── */
 :root,
-[data-theme="dark"] {
-  --background:                #121212;
-  --surface:                   #121212;
-  --surface-dim:               #131313;
-  --surface-container-lowest:  #0e0e0e;
-  --surface-container-low:     #1E1E1E;
-  --surface-container:         #2C2C2E;
-  --surface-container-high:    #3A3A3C;
-  --surface-container-highest: #48484A;
-  --surface-bright:            #393939;
-  --surface-variant:           #353535;
-  --on-surface:                #FFFFFF;
-  --on-surface-variant:        #AEAEB2;
-  --on-background:             #e5e2e1;
-  --primary:                   #0A84FF;
-  --on-primary:                #FFFFFF;
-  --primary-container:         #0A84FF;
-  --secondary:                 #8E8E93;
-  --secondary-container:       #474649;
-  --tertiary:                  #FF9500;
-  --warning:                   #FF9500;
-  --error:                     #FF453A;
-  --success:                   #30D158;
-  --purple:                    #BF5AF2;
-  --cyan:                      #64D2FF;
-  --outline:                   #3A3A3C;
-  --outline-variant:           #48484A;
-  --glass-bg:                  rgba(30, 30, 30, 0.8);
-  --sidebar-bg:                rgba(30, 30, 30, 0.75);
-  --log-bg:                    rgba(0, 0, 0, 0.4);
-  --hover-overlay:             rgba(255, 255, 255, 0.05);
-  --divider:                   rgba(255, 255, 255, 0.1);
-  --login-glow-1:              rgba(0, 122, 255, 0.1);
-  --login-glow-2:              rgba(0, 122, 255, 0.05);
-  --scrollbar-thumb:           rgba(255, 255, 255, 0.1);
-  --scrollbar-thumb-hover:     rgba(255, 255, 255, 0.2);
-  --muted-fg:                  rgba(255, 255, 255, 0.2);
-  --input-placeholder:         rgba(174, 174, 178, 0.5);
+[data-theme="light"] {
+  color-scheme: light;
+  --background:                245 245 247;  /* content area */
+  --surface:                   245 245 247;
+  --surface-dim:               236 236 238;
+  --surface-container-lowest:  255 255 255;
+  --surface-container-low:     250 250 251;
+  --surface-container:         255 255 255;  /* grouped boxes */
+  --surface-container-high:    237 237 240;
+  --surface-container-highest: 226 226 230;
+  --surface-bright:            255 255 255;
+  --surface-variant:           232 232 236;
+  --on-surface:                29 29 31;
+  --on-surface-variant:        110 110 115;
+  --on-background:             29 29 31;
+  --primary:                   0 122 255;    /* systemBlue */
+  --on-primary:                255 255 255;
+  --primary-container:         0 122 255;
+  --secondary:                 142 142 147;
+  --secondary-container:       229 229 234;
+  --tertiary:                  255 149 0;
+  --warning:                   230 130 0;
+  --error:                     255 59 48;
+  --success:                   40 167 69;
+  --purple:                    175 82 222;
+  --cyan:                      50 173 230;
+  --outline:                   222 222 226;  /* hairline separators */
+  --outline-variant:           234 234 237;
+
+  --sidebar-bg:          rgba(236, 236, 240, 0.72);
+  --toolbar-bg:          rgba(245, 245, 247, 0.85);
+  --glass-bg:            rgba(255, 255, 255, 0.72);
+  --log-bg:              rgba(0, 0, 0, 0.035);
+  --hover-overlay:       rgba(0, 0, 0, 0.045);
+  --selected-bg:         rgba(0, 0, 0, 0.08);
+  --divider:             rgba(0, 0, 0, 0.08);
+  --login-glow-1:        rgba(0, 122, 255, 0.12);
+  --login-glow-2:        rgba(0, 122, 255, 0.06);
+  --scrollbar-thumb:     rgba(0, 0, 0, 0.18);
+  --scrollbar-thumb-hover: rgba(0, 0, 0, 0.3);
+  --muted-fg:            rgba(29, 29, 31, 0.35);
+  --input-placeholder:   rgba(110, 110, 115, 0.6);
+  --card-shadow:         0 0.5px 1px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
-[data-theme="light"] {
-  --background:                #F5F5F7;
-  --surface:                   #F5F5F7;
-  --surface-dim:               #EBEBED;
-  --surface-container-lowest:  #FFFFFF;
-  --surface-container-low:     #F0F0F2;
-  --surface-container:         #E8E8ED;
-  --surface-container-high:    #DCDCE0;
-  --surface-container-highest: #D1D1D6;
-  --surface-bright:            #FFFFFF;
-  --surface-variant:           #E5E5EA;
-  --on-surface:                #1C1C1E;
-  --on-surface-variant:        #6E6E73;
-  --on-background:             #1C1C1E;
-  --primary:                   #007AFF;
-  --on-primary:                #FFFFFF;
-  --primary-container:         #007AFF;
-  --secondary:                 #8E8E93;
-  --secondary-container:       #E5E5EA;
-  --tertiary:                  #FF9500;
-  --warning:                   #FF9500;
-  --error:                     #FF3B30;
-  --success:                   #34C759;
-  --purple:                    #AF52DE;
-  --cyan:                      #32ADE6;
-  --outline:                   #D1D1D6;
-  --outline-variant:           #E5E5EA;
-  --glass-bg:                  rgba(255, 255, 255, 0.72);
-  --sidebar-bg:                rgba(246, 246, 248, 0.78);
-  --log-bg:                    rgba(0, 0, 0, 0.04);
-  --hover-overlay:             rgba(0, 0, 0, 0.04);
-  --divider:                   rgba(0, 0, 0, 0.08);
-  --login-glow-1:              rgba(0, 122, 255, 0.12);
-  --login-glow-2:              rgba(0, 122, 255, 0.06);
-  --scrollbar-thumb:           rgba(0, 0, 0, 0.15);
-  --scrollbar-thumb-hover:     rgba(0, 0, 0, 0.28);
-  --muted-fg:                  rgba(28, 28, 30, 0.35);
-  --input-placeholder:         rgba(110, 110, 115, 0.55);
+[data-theme="dark"] {
+  color-scheme: dark;
+  --background:                30 30 32;
+  --surface:                   30 30 32;
+  --surface-dim:               24 24 26;
+  --surface-container-lowest:  20 20 22;
+  --surface-container-low:     36 36 38;
+  --surface-container:         40 40 43;
+  --surface-container-high:    52 52 55;
+  --surface-container-highest: 66 66 69;
+  --surface-bright:            58 58 60;
+  --surface-variant:           48 48 50;
+  --on-surface:                245 245 247;
+  --on-surface-variant:        152 152 157;
+  --on-background:             245 245 247;
+  --primary:                   10 132 255;
+  --on-primary:                255 255 255;
+  --primary-container:         10 132 255;
+  --secondary:                 142 142 147;
+  --secondary-container:       72 72 74;
+  --tertiary:                  255 159 10;
+  --warning:                   255 159 10;
+  --error:                     255 69 58;
+  --success:                   48 209 88;
+  --purple:                    191 90 242;
+  --cyan:                      100 210 255;
+  --outline:                   56 56 60;
+  --outline-variant:           46 46 50;
+
+  --sidebar-bg:          rgba(38, 38, 42, 0.62);
+  --toolbar-bg:          rgba(30, 30, 32, 0.85);
+  --glass-bg:            rgba(40, 40, 43, 0.8);
+  --log-bg:              rgba(0, 0, 0, 0.28);
+  --hover-overlay:       rgba(255, 255, 255, 0.05);
+  --selected-bg:         rgba(255, 255, 255, 0.1);
+  --divider:             rgba(255, 255, 255, 0.08);
+  --login-glow-1:        rgba(10, 132, 255, 0.14);
+  --login-glow-2:        rgba(10, 132, 255, 0.06);
+  --scrollbar-thumb:     rgba(255, 255, 255, 0.16);
+  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.28);
+  --muted-fg:            rgba(255, 255, 255, 0.25);
+  --input-placeholder:   rgba(152, 152, 157, 0.6);
+  --card-shadow:         0 0 0 transparent;
 }
 
 /* ─── Reset ──────────────────────────────────────────────────────────────── */
@@ -102,65 +112,55 @@ html, body {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background: var(--background);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  /* Transparent so the window's vibrancy shows through the sidebar; the
+     content pane paints its own opaque background. */
+  background: transparent;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+  font-size: 13px;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
-  color: var(--on-surface);
+  color: rgb(var(--on-surface));
 }
 
-#root {
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
+#root { width: 100%; height: 100%; overflow: hidden; }
+
+/* Smooth theme switches without animating on first paint. */
+.theme-transition, .theme-transition * {
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease !important;
 }
 
 /* ─── Wails drag regions ─────────────────────────────────────────────────── */
 .mac-drag     { --wails-draggable: drag; }
 .mac-no-drag  { --wails-draggable: no-drag; }
 
-/* ─── Material Icons ─────────────────────────────────────────────────────── */
-.material-symbols-outlined {
-  font-family: 'Material Symbols Outlined';
-  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-  font-style: normal;
-  line-height: 1;
-  display: inline-block;
-  white-space: nowrap;
-  word-wrap: normal;
-  direction: ltr;
-  -webkit-font-feature-settings: 'liga';
-  font-feature-settings: 'liga';
-  -webkit-font-smoothing: antialiased;
-  vertical-align: middle;
-}
-
-.material-symbols-outlined.filled {
-  font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
-}
-
-/* ─── Glass Panel (Apple vibrancy effect) ────────────────────────────────── */
+/* ─── Surfaces ───────────────────────────────────────────────────────────── */
 .glass-panel {
   background: var(--glass-bg);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
 }
 
-/* ─── Apple Sidebar (semi-transparent with blur) ────────────────────────── */
 .apple-sidebar {
   background: var(--sidebar-bg);
-  backdrop-filter: blur(30px);
-  -webkit-backdrop-filter: blur(30px);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
 }
 
-/* ─── Primary gradient button ────────────────────────────────────────────── */
+.toolbar {
+  background: var(--toolbar-bg);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+}
+
+.card-shadow { box-shadow: var(--card-shadow); }
+
 .primary-gradient-btn {
-  background: linear-gradient(180deg, var(--primary) 0%, color-mix(in srgb, var(--primary) 70%, #000) 100%);
-  box-shadow: 0 4px 12px color-mix(in srgb, var(--primary) 30%, transparent);
+  background: rgb(var(--primary));
+  box-shadow: 0 1px 2px rgb(var(--primary) / 0.3);
   transition: filter 0.15s, transform 0.1s;
 }
-.primary-gradient-btn:hover  { filter: brightness(1.1); }
+.primary-gradient-btn:hover  { filter: brightness(1.08); }
 .primary-gradient-btn:active { transform: scale(0.98); }
 
 /* ─── Native-style text input ────────────────────────────────────────────── */
@@ -168,63 +168,53 @@ html, body {
   -webkit-user-select: text;
   user-select: text;
   width: 100%;
-  padding: 6px 10px;
+  height: 28px;
+  padding: 4px 8px;
   border-radius: 6px;
-  border: 1px solid var(--outline);
-  background: var(--background);
-  color: var(--on-surface);
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 13px;
+  border: 1px solid rgb(var(--outline));
+  background: rgb(var(--surface-container-lowest));
+  color: rgb(var(--on-surface));
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 12px;
   outline: none;
-  transition: border-color 0.15s;
-  height: 34px;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 .mac-input::placeholder { color: var(--input-placeholder); }
-.mac-input:focus         { border-color: var(--primary); }
-.mac-input:disabled      { opacity: 0.5; cursor: not-allowed; }
+.mac-input:focus {
+  border-color: rgb(var(--primary));
+  box-shadow: 0 0 0 3px rgb(var(--primary) / 0.25);
+}
+.mac-input:disabled { opacity: 0.5; cursor: not-allowed; }
+
+input, textarea, [contenteditable] { -webkit-user-select: text; user-select: text; }
 
 /* ─── Scrollbars ─────────────────────────────────────────────────────────── */
-.custom-scrollbar::-webkit-scrollbar        { width: 4px; }
+.custom-scrollbar::-webkit-scrollbar        { width: 8px; height: 8px; }
 .custom-scrollbar::-webkit-scrollbar-track  { background: transparent; }
-.custom-scrollbar::-webkit-scrollbar-thumb  { background: var(--scrollbar-thumb); border-radius: 2px; }
-.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); }
+.custom-scrollbar::-webkit-scrollbar-thumb  {
+  background: var(--scrollbar-thumb);
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: var(--scrollbar-thumb-hover); }
 
 /* ─── Animations ─────────────────────────────────────────────────────────── */
-@keyframes pulse-blue {
-  0%, 100% { opacity: 1;   transform: scale(1);   }
-  50%      { opacity: 0.5; transform: scale(1.2); }
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.45; }
 }
-.animate-status-pulse { animation: pulse-blue 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+.animate-status-pulse { animation: pulse-dot 2s ease-in-out infinite; }
 
-@keyframes blink {
-  50% { opacity: 0; }
-}
+@keyframes blink { 50% { opacity: 0; } }
 .cursor-blink { animation: blink 1s step-end infinite; }
 
 @keyframes fade-in {
-  from { opacity: 0; transform: translateY(6px); }
+  from { opacity: 0; transform: translateY(4px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-.animate-page-in { animation: fade-in 0.25s ease-out; }
+.animate-page-in { animation: fade-in 0.2s ease-out; }
 
-/* ─── Login page glow effect ─────────────────────────────────────────────── */
-.login-glow-1 { background: var(--login-glow-1); }
-.login-glow-2 { background: var(--login-glow-2); }
-
-/* ─── Log / console backgrounds ──────────────────────────────────────────── */
-.log-surface {
-  background: var(--log-bg);
-}
-
-/* ─── Hover overlay utility ──────────────────────────────────────────────── */
-.hover-overlay:hover {
-  background: var(--hover-overlay);
-}
-
-/* ─── Table styles ───────────────────────────────────────────────────────── */
-table { border-collapse: collapse; }
-
-/* ─── Toast ──────────────────────────────────────────────────────────────── */
 @keyframes toast-in {
   from { opacity: 0; transform: translateY(-8px) scale(0.96); }
   to   { opacity: 1; transform: translateY(0) scale(1); }
@@ -235,3 +225,17 @@ table { border-collapse: collapse; }
 }
 .animate-toast-in  { animation: toast-in 0.2s ease-out; }
 .animate-toast-out { animation: toast-out 0.2s ease-in forwards; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+
+/* ─── Misc utilities ─────────────────────────────────────────────────────── */
+.login-glow-1 { background: var(--login-glow-1); }
+.login-glow-2 { background: var(--login-glow-2); }
+.log-surface  { background: var(--log-bg); }
+.hover-overlay:hover { background: var(--hover-overlay); }
+.bg-selected  { background: var(--selected-bg); }
+.tabular-nums { font-variant-numeric: tabular-nums; }
+
+table { border-collapse: collapse; }

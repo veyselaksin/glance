@@ -12,10 +12,6 @@ export function LogsView({ logs, onClearLogs }: LogsViewProps) {
 
   return (
     <div className="animate-page-in h-[calc(100vh-130px)] flex flex-col">
-      <div className="mb-md">
-        <h3 className="text-headline-lg font-headline-lg text-on-surface mb-xs">Console Logs</h3>
-        <p className="text-on-surface-variant font-body-md">Real-time agent output and sync events.</p>
-      </div>
 
       <div className="flex-1 glass-panel border border-outline rounded-xl flex flex-col overflow-hidden">
         <div className="bg-surface-container-high px-md py-sm flex items-center justify-between border-b border-outline">

@@ -1,3 +1,4 @@
+import { Icon } from './Icon';
 type MetricTone = 'primary' | 'success' | 'warning' | 'purple';
 
 const toneClass: Record<MetricTone, string> = {
@@ -27,7 +28,7 @@ export function MetricCard({ icon, label, value, sub, pctVal, tone }: MetricCard
   return (
     <div className="bg-background border border-outline rounded-lg p-md flex flex-col">
       <div className="flex items-center gap-xs mb-sm">
-        <span className={`material-symbols-outlined ${toneClass[tone]}`} style={{ fontSize: 16 }}>{icon}</span>
+        <Icon name={icon} size={16} className={`${toneClass[tone]}`} />
         <span className="text-label-caps font-label-caps text-on-surface-variant uppercase">{label}</span>
       </div>
       <div className={`text-[22px] font-bold font-mono leading-none mb-xs ${toneClass[tone]}`}>{value}</div>

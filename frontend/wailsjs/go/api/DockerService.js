@@ -6,6 +6,10 @@ export function DeleteContainer(arg1) {
   return window['go']['api']['DockerService']['DeleteContainer'](arg1);
 }
 
+export function DockerRuntime() {
+  return window['go']['api']['DockerService']['DockerRuntime']();
+}
+
 export function GetContainers() {
   return window['go']['api']['DockerService']['GetContainers']();
 }
@@ -16,6 +20,10 @@ export function RestartContainer(arg1) {
 
 export function StartContainer(arg1) {
   return window['go']['api']['DockerService']['StartContainer'](arg1);
+}
+
+export function StartDaemon() {
+  return window['go']['api']['DockerService']['StartDaemon']();
 }
 
 export function StopContainer(arg1) {

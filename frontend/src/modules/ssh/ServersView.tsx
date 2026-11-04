@@ -1,3 +1,4 @@
+import { Icon } from '../../components/Icon';
 import { useState, useEffect, useCallback } from 'react';
 import type { ServerConfig } from '../../types';
 import { useServers } from './useServers';
@@ -49,17 +50,13 @@ export function ServersView() {
   const selectedPing = selectedID ? pings[selectedID] : undefined;
 
   return (
-    <div className="animate-page-in h-[calc(100vh-130px)] flex flex-col">
-      <div className="mb-md flex items-center justify-between">
-        <div>
-          <h3 className="text-headline-md md:text-headline-lg font-headline-lg text-on-surface mb-xs">Servers / VPS</h3>
-          <p className="text-on-surface-variant font-body-md">SSH terminal and real-time infrastructure monitoring.</p>
-        </div>
+    <div className="animate-page-in h-full flex flex-col">
+      <div className="mb-md flex items-center justify-end">
         <button
           onClick={() => { setEditing(null); setShowForm(true); }}
           className="flex items-center gap-xs bg-primary text-on-primary px-md py-1.5 rounded font-body-sm text-body-sm font-semibold hover:brightness-110 active:scale-95 duration-100 transition-all cursor-pointer"
         >
-          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>add</span>
+          <Icon name="add" size={16} />
           Add Server
         </button>
       </div>
@@ -84,7 +81,7 @@ export function ServersView() {
           {!selectedServer ? (
             <div className="h-full flex items-center justify-center bg-surface-container border border-outline rounded-xl">
               <div className="text-center">
-                <span className="material-symbols-outlined text-on-surface-variant/20" style={{ fontSize: 64 }}>terminal</span>
+                <Icon name="terminal" size={64} className="text-on-surface-variant/20" />
                 <p className="text-on-surface-variant font-body-md mt-md">Select a server to view metrics or start a terminal session.</p>
               </div>
             </div>

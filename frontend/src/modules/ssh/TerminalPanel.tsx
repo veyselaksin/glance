@@ -1,3 +1,4 @@
+import { Icon } from '../../components/Icon';
 import { useState, useRef, useEffect } from 'react';
 import { Terminal } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
@@ -128,7 +129,7 @@ export function TerminalPanel({ serverID, serverName, onDisconnect }: TerminalPa
           onClick={handleDisconnect}
           className="flex items-center gap-xs px-sm py-xs rounded text-on-surface-variant hover:text-error hover:bg-error/10 transition-colors text-body-sm font-body-sm cursor-pointer"
         >
-          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>power_off</span>
+          <Icon name="power_off" size={16} />
           Disconnect
         </button>
       </div>

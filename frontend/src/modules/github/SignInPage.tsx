@@ -1,3 +1,4 @@
+import { Icon } from '../../components/Icon';
 import { useState, useEffect } from 'react';
 import { BrowserOpenURL } from '../../lib/events';
 import { getAppVersion } from '../../services/app.service';
@@ -89,7 +90,7 @@ export function SignInPage({ onSignIn, isSigningIn, userCode, verificationUri }:
             <div className="h-px w-full bg-divider" />
             <div className="flex items-center justify-between mt-sm">
               <span className="text-code-sm font-code-sm text-on-surface-variant/70 flex items-center gap-xs">
-                <span className="material-symbols-outlined" style={{ fontSize: 14 }}>lock</span>
+                <Icon name="lock" size={14} />
                 Device Flow · No secret stored
               </span>
               <span className="text-body-sm font-body-sm text-primary/50">Open Source</span>

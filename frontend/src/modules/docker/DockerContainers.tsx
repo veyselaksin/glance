@@ -1,3 +1,4 @@
+import { Icon } from '../../components/Icon';
 import { Fragment, memo } from 'react';
 import type { RefObject } from 'react';
 import type { ContainerInfo } from '../../types';
@@ -110,9 +111,7 @@ const ContainerRow = memo(function ContainerRow({
                   aria-label="Stop container"
                   className="group relative flex items-center justify-center w-7 h-7 rounded text-on-surface-variant hover:text-warning hover:bg-warning/10 transition-colors cursor-pointer disabled:opacity-40"
                 >
-                  <span className={`material-symbols-outlined ${actionPending !== c.id + ':stop' ? 'filled' : ''}`} style={{ fontSize: 18 }}>
-                    {actionPending === c.id + ':stop' ? 'progress_activity' : 'stop_circle'}
-                  </span>
+                  <Icon name={actionPending === c.id + ':stop' ? 'progress_activity' : 'stop_circle'} size={18} className={`${actionPending !== c.id + ':stop' ? 'filled' : ''}`} />
                   <span className="pointer-events-none absolute -top-7 left-1/2 -translate-x-1/2 whitespace-nowrap px-1.5 py-0.5 rounded bg-surface-container-highest border border-outline text-[10px] text-on-surface font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-100 z-20">Stop</span>
                 </button>
                 <button
@@ -121,9 +120,7 @@ const ContainerRow = memo(function ContainerRow({
                   aria-label="Restart container"
                   className="group relative flex items-center justify-center w-7 h-7 rounded text-on-surface-variant hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer disabled:opacity-40"
                 >
-                  <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
-                    {actionPending === c.id + ':restart' ? 'progress_activity' : 'restart_alt'}
-                  </span>
+                  <Icon name={actionPending === c.id + ':restart' ? 'progress_activity' : 'restart_alt'} size={18} />
                   <span className="pointer-events-none absolute -top-7 left-1/2 -translate-x-1/2 whitespace-nowrap px-1.5 py-0.5 rounded bg-surface-container-highest border border-outline text-[10px] text-on-surface font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-100 z-20">Restart</span>
                 </button>
               </>
@@ -134,9 +131,7 @@ const ContainerRow = memo(function ContainerRow({
                 aria-label="Start container"
                 className="group relative flex items-center justify-center w-7 h-7 rounded text-on-surface-variant hover:text-primary hover:bg-primary/10 transition-colors cursor-pointer disabled:opacity-40"
               >
-                <span className={`material-symbols-outlined ${actionPending !== c.id + ':start' ? 'filled' : ''}`} style={{ fontSize: 18 }}>
-                  {actionPending === c.id + ':start' ? 'progress_activity' : 'play_circle'}
-                </span>
+                <Icon name={actionPending === c.id + ':start' ? 'progress_activity' : 'play_circle'} size={18} className={`${actionPending !== c.id + ':start' ? 'filled' : ''}`} />
                 <span className="pointer-events-none absolute -top-7 left-1/2 -translate-x-1/2 whitespace-nowrap px-1.5 py-0.5 rounded bg-surface-container-highest border border-outline text-[10px] text-on-surface font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-100 z-20">Start</span>
               </button>
             )}
@@ -147,7 +142,7 @@ const ContainerRow = memo(function ContainerRow({
                 isExpanded ? 'text-primary bg-primary/10' : 'text-on-surface-variant hover:text-primary hover:bg-primary/10'
               }`}
             >
-              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>receipt_long</span>
+              <Icon name="receipt_long" size={18} />
               <span className="pointer-events-none absolute -top-7 left-1/2 -translate-x-1/2 whitespace-nowrap px-1.5 py-0.5 rounded bg-surface-container-highest border border-outline text-[10px] text-on-surface font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-100 z-20">{isExpanded ? 'Hide logs' : 'View logs'}</span>
             </button>
             <button
@@ -156,9 +151,7 @@ const ContainerRow = memo(function ContainerRow({
               aria-label="Delete container"
               className="group relative flex items-center justify-center w-7 h-7 rounded text-on-surface-variant hover:text-error hover:bg-error/10 transition-colors cursor-pointer disabled:opacity-40"
             >
-              <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
-                {actionPending === c.id + ':delete' ? 'progress_activity' : 'delete_forever'}
-              </span>
+              <Icon name={actionPending === c.id + ':delete' ? 'progress_activity' : 'delete_forever'} size={18} />
               <span className="pointer-events-none absolute -top-7 left-1/2 -translate-x-1/2 whitespace-nowrap px-1.5 py-0.5 rounded bg-surface-container-highest border border-outline text-[10px] text-on-surface font-medium opacity-0 group-hover:opacity-100 transition-opacity duration-100 z-20">Delete</span>
             </button>
           </div>
@@ -170,7 +163,7 @@ const ContainerRow = memo(function ContainerRow({
             <div className="rounded-lg border border-outline/60 overflow-hidden">
               <div className="flex items-center justify-between px-sm py-xs bg-surface-container-high border-b border-outline">
                 <div className="flex items-center gap-xs text-primary">
-                  <span className="material-symbols-outlined" style={{ fontSize: 14 }}>subject</span>
+                  <Icon name="subject" size={14} />
                   <span className="text-label-caps font-label-caps uppercase">Container Logs \u2014 {c.name}</span>
                 </div>
                 <span className="text-[11px] text-on-surface-variant font-code-sm">last 200 lines</span>
@@ -216,14 +209,14 @@ export function DockerContainers({
     <div className="bg-surface-container border border-outline rounded-xl overflow-visible">
       <div className="flex items-center justify-between px-md py-sm border-b border-outline">
         <div className="flex items-center gap-xs text-primary">
-          <span className="material-symbols-outlined" style={{ fontSize: 18 }}>view_list</span>
+          <Icon name="view_list" size={18} />
           <span className="text-label-caps font-label-caps uppercase">Active Containers</span>
         </div>
         <button
           onClick={fetchContainers}
           className="flex items-center gap-xs text-on-surface-variant hover:text-primary transition-colors text-body-sm font-body-sm cursor-pointer"
         >
-          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>refresh</span>
+          <Icon name="refresh" size={16} />
           Refresh
         </button>
       </div>

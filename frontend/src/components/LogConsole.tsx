@@ -1,3 +1,4 @@
+import { Icon } from './Icon';
 import { useState, useRef, useEffect } from 'react';
 import { now } from '../utils/format';
 import type { LogLine } from '../types';
@@ -28,7 +29,7 @@ export function LogConsole({ logs }: LogConsoleProps) {
             onClick={() => setCollapsed(v => !v)}
             className="text-on-surface-variant hover:text-on-surface transition-colors cursor-pointer"
           >
-            <span className="material-symbols-outlined" style={{ fontSize: 16 }}>{collapsed ? 'expand_less' : 'expand_more'}</span>
+            <Icon name={collapsed ? 'expand_less' : 'expand_more'} size={16} />
           </button>
         </div>
         {!collapsed && (

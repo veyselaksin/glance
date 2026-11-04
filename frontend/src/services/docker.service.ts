@@ -1,4 +1,4 @@
-import { GetContainers, StopContainer, StartContainer, RestartContainer, DeleteContainer, StreamContainerLogs } from '../../wailsjs/go/api/DockerService';
+import { GetContainers, StopContainer, StartContainer, RestartContainer, DeleteContainer, StreamContainerLogs, DockerRuntime, StartDaemon } from '../../wailsjs/go/api/DockerService';
 import type { ContainerInfo } from '../types';
 
 export function getContainers(): Promise<ContainerInfo[]> {
@@ -23,4 +23,14 @@ export function deleteContainer(id: string): Promise<void> {
 
 export function streamContainerLogs(id: string, lines: number): Promise<string> {
   return StreamContainerLogs(id, lines);
+}
+
+/** Name of the installed runtime ("Docker Desktop", "OrbStack", "Colima"), or "" if none. */
+export function getDockerRuntime(): Promise<string> {
+  return DockerRuntime();
+}
+
+/** Launches the runtime and resolves once the daemon responds (up to ~2 min). */
+export function startDockerDaemon(): Promise<string> {
+  return StartDaemon();
 }

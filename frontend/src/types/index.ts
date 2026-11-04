@@ -24,7 +24,7 @@ export interface Config {
 
 export interface AppData {
   updated_at: string;
-  github: { username: string; contributions: number; commits: number; error?: string };
+  github: { username: string; contributions: number; commits: number; error?: string; warning?: string };
   docker: { running: number; stopped: number; total: number; version?: string; error?: string };
   server: { host: string; online: boolean; latency: number; error?: string };
 }
@@ -70,4 +70,4 @@ export interface PingResult {
   error?: string;
 }
 
-export type TabId = 'overview' | 'github' | 'docker' | 'servers' | 'logs' | 'docs';
+export type TabId = 'overview' | 'github' | 'docker' | 'servers' | 'logs' | 'docs' | 'settings';

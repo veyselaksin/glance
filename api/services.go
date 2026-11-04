@@ -140,6 +140,18 @@ func (s *GitHubService) StartDeviceFlow() error {
 	return nil
 }
 
+// GetActivity returns the signed-in user's commits on every branch over the
+// last days days (1 = today), with a per-repository breakdown.
+func (s *GitHubService) GetActivity(days int) (github.Activity, error) {
+	user, token := s.app.Config.Get().GitHubUsername, s.app.githubToken()
+	if user == "" || token == "" {
+		return github.Activity{}, errors.New("sign in to GitHub to see activity")
+	}
+	ctx, cancel := context.WithTimeout(s.app.Bridge.Context(), 60*time.Second)
+	defer cancel()
+	return s.app.GitHub.Activity(ctx, user, token, days)
+}
+
 // SignOut removes the stored token and clears the GitHub identity.
 func (s *GitHubService) SignOut() error {
 	if err := s.app.Secrets.Delete(secrets.GitHubToken); err != nil {
@@ -180,6 +192,36 @@ func (s *DockerService) action(fn func(context.Context, string) error, id string
 	ctx, cancel := timeout(30 * time.Second)
 	defer cancel()
 	return fn(ctx, id)
+}
+
+// DockerRuntime returns the name of the installed runtime that StartDaemon
+// would launch (e.g. "Docker Desktop"), or "" if none is installed.
+func (s *DockerService) DockerRuntime() string {
+	rt, err := docker.DetectRuntime()
+	if err != nil {
+		return ""
+	}
+	return rt.Name
+}
+
+// StartDaemon launches the local Docker runtime and waits (up to 2 minutes)
+// until the daemon responds, then refreshes the overview. Returns the
+// runtime's name.
+func (s *DockerService) StartDaemon() (string, error) {
+	rt, err := docker.DetectRuntime()
+	if err != nil {
+		return "", err
+	}
+	s.app.Bridge.Log("DOCK", "Starting "+rt.Name+"...")
+	ctx, cancel := context.WithTimeout(s.app.Bridge.Context(), 2*time.Minute)
+	defer cancel()
+	if err := s.app.Docker.StartDaemon(ctx, rt); err != nil {
+		s.app.Bridge.Log("DOCK", "Start failed: "+err.Error())
+		return rt.Name, err
+	}
+	s.app.Bridge.Log("DOCK", rt.Name+" is running")
+	s.app.Poller.Refresh()
+	return rt.Name, nil
 }
 
 // StartContainer starts a container.
