@@ -21,13 +21,16 @@ var assets embed.FS
 //go:embed wails.json
 var wailsConfig []byte
 
-// version is read from wails.json so it only needs to change in one place.
+// version is read from wails.json's info.productVersion, the same field Wails
+// writes into the app bundle, so it only needs to change in one place.
 func version() string {
 	var cfg struct {
-		Version string `json:"version"`
+		Info struct {
+			ProductVersion string `json:"productVersion"`
+		} `json:"info"`
 	}
-	if json.Unmarshal(wailsConfig, &cfg) == nil && cfg.Version != "" {
-		return cfg.Version
+	if json.Unmarshal(wailsConfig, &cfg) == nil && cfg.Info.ProductVersion != "" {
+		return cfg.Info.ProductVersion
 	}
 	return "dev"
 }
