@@ -1,9 +1,13 @@
 package config
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+
+	"dev-stats-widget/internal/secrets"
 )
 
 func TestOpenMissingFileYieldsEmpty(t *testing.T) {
@@ -57,5 +61,46 @@ func TestCorruptFileYieldsEmpty(t *testing.T) {
 	}
 	if got := Open(dir).Get(); got.GitHubUsername != "" {
 		t.Fatalf("got %+v", got)
+	}
+}
+
+type failingSecrets struct{ secrets.Memory }
+
+func (failingSecrets) Set(string, string) error { return errors.New("keychain locked") }
+
+func TestMigrateSecretsMovesAndClears(t *testing.T) {
+	dir := t.TempDir()
+	legacy := `{"github_username":"me","github_token":"ghp_x","servers":[{"id":"s1","password":"pw"},{"id":"s2","auth_method":"private_key"}]}`
+	if err := os.WriteFile(filepath.Join(dir, "config.json"), []byte(legacy), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	sec := secrets.Memory{}
+	s := Open(dir)
+	if err := s.MigrateSecrets(sec); err != nil {
+		t.Fatal(err)
+	}
+	if sec[secrets.GitHubToken] != "ghp_x" || sec[secrets.SSHPassword("s1")] != "pw" {
+		t.Fatalf("keychain = %v", sec)
+	}
+	raw, _ := os.ReadFile(filepath.Join(dir, "config.json"))
+	if strings.Contains(string(raw), "ghp_x") || strings.Contains(string(raw), `"pw"`) {
+		t.Fatalf("secrets left on disk: %s", raw)
+	}
+	if got := Open(dir).Get(); got.Version != CurrentVersion || got.GitHubUsername != "me" || len(got.Servers) != 2 {
+		t.Fatalf("got %+v", got)
+	}
+}
+
+func TestMigrateSecretsKeepsOnKeychainFailure(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "config.json"), []byte(`{"github_token":"ghp_x"}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	s := Open(dir)
+	if err := s.MigrateSecrets(failingSecrets{}); err == nil {
+		t.Fatal("expected error")
+	}
+	if got := Open(dir).Get(); got.GitHubToken != "ghp_x" || got.Version == CurrentVersion {
+		t.Fatalf("token lost or version bumped: %+v", got)
 	}
 }

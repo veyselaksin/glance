@@ -12,34 +12,42 @@ import (
 	"dev-stats-widget/internal/docker"
 	"dev-stats-widget/internal/github"
 	"dev-stats-widget/internal/poller"
+	"dev-stats-widget/internal/secrets"
 	"dev-stats-widget/internal/sshx"
 )
 
 // App wires the domain packages together and exposes the bound services.
 type App struct {
-	Bridge *bridge.Bridge
-	Config *config.Store
-	GitHub *github.Client
-	Docker *docker.Client
-	SSH    *sshx.Manager
-	Keys   *sshx.KeyStore
-	Poller *poller.Poller
+	Bridge  *bridge.Bridge
+	Config  *config.Store
+	Secrets secrets.Store
+	GitHub  *github.Client
+	Docker  *docker.Client
+	SSH     *sshx.Manager
+	Keys    *sshx.KeyStore
+	Poller  *poller.Poller
 
 	bindings []any
 }
 
-// New builds the application from the data directory (normally ~/.glance).
-func New(dataDir, version string) (*App, error) {
+// New builds the application from the data directory (normally ~/.glance),
+// storing credentials in sec.
+func New(dataDir, version string, sec secrets.Store) (*App, error) {
 	keys, err := sshx.NewKeyStore(dataDir)
 	if err != nil {
 		return nil, err
 	}
 	a := &App{
-		Bridge: bridge.New(),
-		Config: config.Open(dataDir),
-		GitHub: github.New(),
-		SSH:    sshx.NewManager(),
-		Keys:   keys,
+		Bridge:  bridge.New(),
+		Config:  config.Open(dataDir),
+		Secrets: sec,
+		GitHub:  github.New(),
+		SSH:     sshx.NewManager(),
+		Keys:    keys,
+	}
+	if err := a.Config.MigrateSecrets(sec); err != nil {
+		// Non-fatal: secrets stay in config.json and migration retries next launch.
+		slog.Error("config: migrating secrets to keychain", "err", err)
 	}
 	a.Docker = docker.New(a.Config.Get().DockerSocket)
 	a.Poller = &poller.Poller{
@@ -49,7 +57,7 @@ func New(dataDir, version string) (*App, error) {
 		Bridge:   a.Bridge,
 		Sources: func() poller.Sources {
 			c := a.Config.Get()
-			return poller.Sources{GitHubUsername: c.GitHubUsername, GitHubToken: c.GitHubToken, ServerHost: c.ServerHost}
+			return poller.Sources{GitHubUsername: c.GitHubUsername, GitHubToken: a.githubToken(), ServerHost: c.ServerHost}
 		},
 	}
 	a.SSH.OnOutput = func(id, data string) {
@@ -85,4 +93,17 @@ func (a *App) Startup(ctx context.Context) {
 func (a *App) Shutdown(context.Context) {
 	a.SSH.CloseAll()
 	a.Docker.Close()
+}
+
+// githubToken reads the token from the keychain, falling back to a legacy
+// plain-text token that has not been migrated yet.
+func (a *App) githubToken() string {
+	tok, err := a.Secrets.Get(secrets.GitHubToken)
+	if err != nil {
+		slog.Warn("keychain: read github token", "err", err)
+	}
+	if tok == "" {
+		tok = a.Config.Get().GitHubToken
+	}
+	return tok
 }

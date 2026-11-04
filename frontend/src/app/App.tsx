@@ -21,10 +21,9 @@ export default function App() {
   const { logs, pushLog, clearLogs } = useLogs();
   const { cfg, setCfg, saving, dirty, flash, update, save } = useConfig({
     github_username: '',
-    github_token: '',
+    github_connected: false,
     client_id: '',
     server_host: '',
-    servers: [],
     docker_socket: '/var/run/docker.sock',
     theme: 'system',
   });
@@ -89,7 +88,7 @@ export default function App() {
     },
   };
 
-  if (!cfg.github_token) {
+  if (!cfg.github_connected) {
     return (
       <ThemeContext.Provider value={themeValue}>
         <SignInPage

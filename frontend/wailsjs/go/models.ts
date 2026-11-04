@@ -1,17 +1,18 @@
-export namespace config {
+export namespace api {
 	
-	export class ServerConfig {
+	export class Server {
 	    id: string;
 	    name: string;
 	    ip: string;
 	    port: number;
 	    username: string;
 	    auth_method: string;
-	    password?: string;
 	    private_key_path?: string;
+	    has_password: boolean;
+	    password?: string;
 	
 	    static createFrom(source: any = {}) {
-	        return new ServerConfig(source);
+	        return new Server(source);
 	    }
 	
 	    constructor(source: any = {}) {
@@ -22,51 +23,32 @@ export namespace config {
 	        this.port = source["port"];
 	        this.username = source["username"];
 	        this.auth_method = source["auth_method"];
-	        this.password = source["password"];
 	        this.private_key_path = source["private_key_path"];
+	        this.has_password = source["has_password"];
+	        this.password = source["password"];
 	    }
 	}
-	export class Config {
+	export class Settings {
 	    github_username: string;
-	    github_token: string;
+	    github_connected: boolean;
 	    client_id: string;
 	    server_host: string;
-	    servers: ServerConfig[];
 	    docker_socket: string;
 	    theme: string;
 	
 	    static createFrom(source: any = {}) {
-	        return new Config(source);
+	        return new Settings(source);
 	    }
 	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.github_username = source["github_username"];
-	        this.github_token = source["github_token"];
+	        this.github_connected = source["github_connected"];
 	        this.client_id = source["client_id"];
 	        this.server_host = source["server_host"];
-	        this.servers = this.convertValues(source["servers"], ServerConfig);
 	        this.docker_socket = source["docker_socket"];
 	        this.theme = source["theme"];
 	    }
-	
-		convertValues(a: any, classs: any, asMap: boolean = false): any {
-		    if (!a) {
-		        return a;
-		    }
-		    if (a.slice && a.map) {
-		        return (a as any[]).map(elem => this.convertValues(elem, classs));
-		    } else if ("object" === typeof a) {
-		        if (asMap) {
-		            for (const key of Object.keys(a)) {
-		                a[key] = new classs(a[key]);
-		            }
-		            return a;
-		        }
-		        return new classs(a);
-		    }
-		    return a;
-		}
 	}
 
 }

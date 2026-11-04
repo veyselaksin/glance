@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import type { Config, AppData, TabId } from '../../types';
 
 interface OverviewViewProps {
@@ -8,8 +7,6 @@ interface OverviewViewProps {
 }
 
 export function OverviewView({ cfg, data, onTabChange }: OverviewViewProps) {
-  const [showToken, setShowToken] = useState(false);
-
   return (
     <div className="animate-page-in space-y-xl">
       <div className="mb-md">
@@ -33,25 +30,11 @@ export function OverviewView({ cfg, data, onTabChange }: OverviewViewProps) {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-md flex-1">
             <div className="space-y-sm">
-              <label className="block text-label-caps font-label-caps text-on-surface-variant">Personal Access Token</label>
-              <div className="relative">
-                <input
-                  className="mac-input pr-8"
-                  type={showToken ? 'text' : 'password'}
-                  value={cfg.github_token}
-                  readOnly
-                  placeholder="Not connected"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowToken(v => !v)}
-                  aria-label={showToken ? 'Hide token' : 'Show token'}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary transition-colors cursor-pointer"
-                >
-                  <span className="material-symbols-outlined" style={{ fontSize: 16 }}>{showToken ? 'visibility_off' : 'visibility'}</span>
-                </button>
+              <label className="block text-label-caps font-label-caps text-on-surface-variant">Access Token</label>
+              <div className="flex items-center gap-sm p-2 bg-background border border-outline rounded text-body-sm text-on-surface-variant">
+                <span className="material-symbols-outlined" style={{ fontSize: 16 }}>{cfg.github_connected ? 'lock' : 'lock_open'}</span>
+                <span>{cfg.github_connected ? 'Stored in macOS Keychain' : 'Not connected'}</span>
               </div>
-              <p className="text-[11px] text-on-surface-variant/60 font-body-sm">Required for repo discovery and CI/CD triggers.</p>
             </div>
             <div className="space-y-sm">
               <label className="block text-label-caps font-label-caps text-on-surface-variant">Connected Account</label>

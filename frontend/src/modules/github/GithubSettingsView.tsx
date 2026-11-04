@@ -69,7 +69,7 @@ export function GithubSettingsView({ cfg, onUpdate, onSave, saving, dirty, flash
               <div className="w-2 h-2 rounded-full bg-primary animate-status-pulse" />
               <div>
                 <div className="text-body-sm font-body-sm text-on-surface">
-                  {cfg.github_token
+                  {cfg.github_connected
                     ? <>Connected as <strong className="text-primary">@{cfg.github_username}</strong></>
                     : <span className="text-on-surface-variant">Not signed in</span>}
                 </div>
@@ -78,7 +78,7 @@ export function GithubSettingsView({ cfg, onUpdate, onSave, saving, dirty, flash
                 </div>
               </div>
             </div>
-            {cfg.github_token && (
+            {cfg.github_connected && (
               <button
                 onClick={onSignOut}
                 className="text-body-sm font-body-sm text-warning hover:text-warning/80 transition-colors cursor-pointer"

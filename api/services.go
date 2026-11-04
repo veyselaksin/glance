@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"dev-stats-widget/internal/bridge"
@@ -12,6 +13,7 @@ import (
 	"dev-stats-widget/internal/github"
 	"dev-stats-widget/internal/netcheck"
 	"dev-stats-widget/internal/poller"
+	"dev-stats-widget/internal/secrets"
 	"dev-stats-widget/internal/sshx"
 )
 
@@ -37,31 +39,41 @@ func (s *SystemService) RefreshNow() { s.app.Poller.Refresh() }
 
 // ─── Settings ─────────────────────────────────────────────────────────────────
 
-// SettingsService reads and writes the persisted configuration.
+// SettingsService reads and writes user preferences.
 type SettingsService struct{ app *App }
 
-// GetConfig returns the current configuration (server passwords stripped).
-func (s *SettingsService) GetConfig() config.Config {
-	c := s.app.Config.Get()
-	for i := range c.Servers {
-		c.Servers[i].Password = ""
-	}
-	return c
+// Settings is the frontend view of the config. It never carries secrets;
+// servers are managed through ServerService.
+type Settings struct {
+	GitHubUsername  string `json:"github_username"`
+	GitHubConnected bool   `json:"github_connected"`
+	ClientID        string `json:"client_id"`
+	ServerHost      string `json:"server_host"`
+	DockerSocket    string `json:"docker_socket"`
+	Theme           string `json:"theme"`
 }
 
-// SaveConfig persists cfg and refreshes. Empty GitHub credentials are kept,
-// and the server list is always kept: it is managed by ServerService, and the
-// frontend's copy may be stale or have passwords stripped.
-func (s *SettingsService) SaveConfig(cfg config.Config) error {
+// GetConfig returns the current settings.
+func (s *SettingsService) GetConfig() Settings {
+	c := s.app.Config.Get()
+	return Settings{
+		GitHubUsername:  c.GitHubUsername,
+		GitHubConnected: s.app.githubToken() != "",
+		ClientID:        c.ClientID,
+		ServerHost:      c.ServerHost,
+		DockerSocket:    c.DockerSocket,
+		Theme:           c.Theme,
+	}
+}
+
+// SaveConfig persists the user-editable preferences and refreshes. The
+// GitHub identity is owned by the sign-in flow and is not changed here.
+func (s *SettingsService) SaveConfig(in Settings) error {
 	next, err := s.app.Config.Update(func(c *config.Config) {
-		if cfg.GitHubToken == "" {
-			cfg.GitHubToken = c.GitHubToken
-		}
-		if cfg.GitHubUsername == "" {
-			cfg.GitHubUsername = c.GitHubUsername
-		}
-		cfg.Servers = c.Servers
-		*c = cfg
+		c.ClientID = in.ClientID
+		c.ServerHost = in.ServerHost
+		c.DockerSocket = in.DockerSocket
+		c.Theme = in.Theme
 	})
 	s.app.Docker.SetSocket(next.DockerSocket)
 	s.app.Poller.Refresh()
@@ -111,8 +123,12 @@ func (s *GitHubService) StartDeviceFlow() error {
 			a.Bridge.Emit(bridge.EventOAuthError, "Failed to fetch GitHub profile: "+err.Error())
 			return
 		}
+		if err := a.Secrets.Set(secrets.GitHubToken, token); err != nil {
+			a.Bridge.Emit(bridge.EventOAuthError, "Failed to store token in Keychain: "+err.Error())
+			return
+		}
 		if _, err := a.Config.Update(func(c *config.Config) {
-			c.GitHubToken = token
+			c.GitHubToken = ""
 			c.GitHubUsername = username
 		}); err != nil {
 			a.Bridge.Emit(bridge.EventOAuthError, "Failed to save credentials: "+err.Error())
@@ -124,8 +140,11 @@ func (s *GitHubService) StartDeviceFlow() error {
 	return nil
 }
 
-// SignOut clears the GitHub credentials.
+// SignOut removes the stored token and clears the GitHub identity.
 func (s *GitHubService) SignOut() error {
+	if err := s.app.Secrets.Delete(secrets.GitHubToken); err != nil {
+		return err
+	}
 	_, err := s.app.Config.Update(func(c *config.Config) {
 		c.GitHubToken = ""
 		c.GitHubUsername = ""
@@ -180,14 +199,29 @@ func (s *DockerService) DeleteContainer(id string) error { return s.action(s.app
 // ServerService manages saved servers, SSH sessions and metrics.
 type ServerService struct{ app *App }
 
-func targetFor(srv config.ServerConfig) sshx.Target {
-	t := sshx.Target{Host: srv.IP, Port: srv.Port, User: srv.Username}
-	if srv.AuthMethod == "private_key" {
-		t.KeyPath = srv.PrivateKeyPath
-	} else {
-		t.Password = srv.Password
+// Server is the frontend view of a saved server. Password is write-only:
+// it is accepted by SaveServer and never returned.
+type Server struct {
+	ID             string `json:"id"`
+	Name           string `json:"name"`
+	IP             string `json:"ip"`
+	Port           int    `json:"port"`
+	Username       string `json:"username"`
+	AuthMethod     string `json:"auth_method"` // "password" or "private_key"
+	PrivateKeyPath string `json:"private_key_path,omitempty"`
+	HasPassword    bool   `json:"has_password"`
+	Password       string `json:"password,omitempty"`
+}
+
+func (s *ServerService) password(srv config.ServerConfig) string {
+	pw, err := s.app.Secrets.Get(secrets.SSHPassword(srv.ID))
+	if err != nil {
+		slog.Warn("keychain: read ssh password", "server", srv.ID, "err", err)
 	}
-	return t
+	if pw == "" {
+		pw = srv.Password // not yet migrated
+	}
+	return pw
 }
 
 func (s *ServerService) target(id string) (config.ServerConfig, sshx.Target, error) {
@@ -195,26 +229,38 @@ func (s *ServerService) target(id string) (config.ServerConfig, sshx.Target, err
 	if !ok {
 		return srv, sshx.Target{}, fmt.Errorf("server not found: %s", id)
 	}
-	return srv, targetFor(srv), nil
+	t := sshx.Target{Host: srv.IP, Port: srv.Port, User: srv.Username}
+	if srv.AuthMethod == "private_key" {
+		t.KeyPath = srv.PrivateKeyPath
+	} else {
+		t.Password = s.password(srv)
+	}
+	return srv, t, nil
 }
 
-// GetServers returns saved servers without passwords.
-func (s *ServerService) GetServers() []config.ServerConfig {
-	out := s.app.Config.Get().Servers
-	for i := range out {
-		out[i].Password = ""
-	}
-	if out == nil {
-		out = []config.ServerConfig{}
+// GetServers returns saved servers (without secrets).
+func (s *ServerService) GetServers() []Server {
+	list := s.app.Config.Get().Servers
+	out := make([]Server, len(list))
+	for i, srv := range list {
+		out[i] = Server{
+			ID: srv.ID, Name: srv.Name, IP: srv.IP, Port: srv.Port, Username: srv.Username,
+			AuthMethod: srv.AuthMethod, PrivateKeyPath: srv.PrivateKeyPath,
+			HasPassword: srv.AuthMethod != "private_key" && s.password(srv) != "",
+		}
 	}
 	return out
 }
 
-// SaveServer upserts a server and returns its ID. Empty credentials on update
-// keep the existing ones.
-func (s *ServerService) SaveServer(srv config.ServerConfig) (string, error) {
-	if srv.Name == "" || srv.IP == "" {
+// SaveServer upserts a server and returns its ID. An empty password or key
+// path on update keeps the existing one; a new password goes to the keychain.
+func (s *ServerService) SaveServer(in Server) (string, error) {
+	if in.Name == "" || in.IP == "" {
 		return "", errors.New("name and ip are required")
+	}
+	srv := config.ServerConfig{
+		ID: in.ID, Name: in.Name, IP: in.IP, Port: in.Port, Username: in.Username,
+		AuthMethod: in.AuthMethod, PrivateKeyPath: in.PrivateKeyPath,
 	}
 	if srv.ID == "" {
 		srv.ID = sshx.NewID()
@@ -228,16 +274,28 @@ func (s *ServerService) SaveServer(srv config.ServerConfig) (string, error) {
 	if srv.AuthMethod == "" {
 		srv.AuthMethod = "password"
 	}
+
+	switch {
+	case srv.AuthMethod == "private_key":
+		if err := s.app.Secrets.Delete(secrets.SSHPassword(srv.ID)); err != nil {
+			return "", err
+		}
+	case in.Password != "":
+		if err := s.app.Secrets.Set(secrets.SSHPassword(srv.ID), in.Password); err != nil {
+			return "", fmt.Errorf("store password in Keychain: %w", err)
+		}
+	}
+
 	_, err := s.app.Config.Update(func(c *config.Config) {
 		for i, existing := range c.Servers {
 			if existing.ID != srv.ID {
 				continue
 			}
-			if srv.AuthMethod == "password" && srv.Password == "" {
-				srv.Password = existing.Password
-			}
 			if srv.AuthMethod == "private_key" && srv.PrivateKeyPath == "" {
 				srv.PrivateKeyPath = existing.PrivateKeyPath
+			}
+			if srv.AuthMethod == "password" && in.Password == "" {
+				srv.Password = existing.Password // keep an unmigrated legacy password
 			}
 			c.Servers[i] = srv
 			return
@@ -247,9 +305,12 @@ func (s *ServerService) SaveServer(srv config.ServerConfig) (string, error) {
 	return srv.ID, err
 }
 
-// DeleteServer removes a server and its stored key.
+// DeleteServer removes a server, its stored key and its password.
 func (s *ServerService) DeleteServer(id string) error {
 	s.app.Keys.Delete(id)
+	if err := s.app.Secrets.Delete(secrets.SSHPassword(id)); err != nil {
+		slog.Warn("keychain: delete ssh password", "server", id, "err", err)
+	}
 	_, err := s.app.Config.Update(func(c *config.Config) {
 		kept := c.Servers[:0]
 		for _, srv := range c.Servers {

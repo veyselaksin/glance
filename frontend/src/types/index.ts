@@ -5,18 +5,19 @@ export interface ServerConfig {
   port: number;
   username: string;
   auth_method: string;
-  password?: string;
   private_key_path?: string;
+  has_password?: boolean;
+  /** Write-only: sent on save, never returned. */
+  password?: string;
 }
 
 export type ThemeMode = 'dark' | 'light' | 'system';
 
 export interface Config {
   github_username: string;
-  github_token: string;
+  github_connected: boolean;
   client_id: string;
   server_host: string;
-  servers: ServerConfig[];
   docker_socket: string;
   theme: ThemeMode;
 }

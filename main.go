@@ -12,6 +12,7 @@ import (
 
 	"dev-stats-widget/api"
 	"dev-stats-widget/internal/config"
+	"dev-stats-widget/internal/secrets"
 )
 
 //go:embed all:frontend/dist
@@ -36,7 +37,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("data dir: %v", err)
 	}
-	app, err := api.New(dir, version())
+	app, err := api.New(dir, version(), secrets.Keychain{})
 	if err != nil {
 		log.Fatalf("init: %v", err)
 	}

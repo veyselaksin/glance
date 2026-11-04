@@ -13,8 +13,9 @@ const DefaultDockerSocket = "/var/run/docker.sock"
 
 // Config holds user-configurable tracking targets, persisted in config.json.
 type Config struct {
+	Version        int            `json:"config_version,omitempty"`
 	GitHubUsername string         `json:"github_username"`
-	GitHubToken    string         `json:"github_token"`
+	GitHubToken    string         `json:"github_token,omitempty"` // legacy (v1): migrated to the keychain
 	ClientID       string         `json:"client_id"` // optional override of the GitHub OAuth client ID
 	ServerHost     string         `json:"server_host"`
 	Servers        []ServerConfig `json:"servers"`
@@ -30,7 +31,7 @@ type ServerConfig struct {
 	Port           int    `json:"port"`
 	Username       string `json:"username"`
 	AuthMethod     string `json:"auth_method"` // "password" or "private_key"
-	Password       string `json:"password,omitempty"`
+	Password       string `json:"password,omitempty"` // legacy (v1): migrated to the keychain
 	PrivateKeyPath string `json:"private_key_path,omitempty"`
 }
 
